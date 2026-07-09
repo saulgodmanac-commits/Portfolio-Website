@@ -26,6 +26,14 @@ const SITE = {
 
   email: "saulgodmanac@gmail.com",
 
+  // How the "Email me" buttons behave:
+  //   "gmail"  — opens Gmail's compose window in a new browser tab.
+  //              Works even if the visitor has no mail app installed, but
+  //              anyone not using Gmail is asked to sign in to Google first.
+  //   "mailto" — opens whatever mail app the visitor already uses.
+  //              Works for everyone who has one; does nothing for those who don't.
+  contactMethod: "gmail",
+
   // Add or remove freely. An empty list [] hides the row entirely.
   socials: []
 };

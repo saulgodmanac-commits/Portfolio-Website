@@ -82,6 +82,14 @@ assets/
   the page opens in a background tab.
 - Everything respects `prefers-reduced-motion`: animations are skipped for
   visitors who ask their system for that.
-- The "Email me" buttons are `mailto:` links, which open whatever mail app
-  the visitor has set up. Some people have none, so the address is also
-  printed as selectable text in the About section.
+- The "Email me" buttons open **Gmail's compose window in a new tab**, with
+  the recipient and subject already filled in. This works even for visitors
+  who have no mail app installed — but a visitor who uses Outlook rather than
+  Gmail will be asked to sign in to Google first.
+
+  To use the visitor's own mail app instead, set `contactMethod: "mailto"`
+  in `SITE` (top of `content.js`). That works for everyone who has a mail app
+  configured, and does nothing at all for everyone who doesn't. Pick your poison.
+
+  Either way, the address is also printed as selectable text in the About
+  section, so it can always be copied by hand.

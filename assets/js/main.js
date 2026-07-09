@@ -22,9 +22,12 @@
     set("bio", esc(SITE.bio));
     set("about", esc(SITE.about));
 
-    // Every email link points at the same address, written in one place.
-    $$('[data-site="email-link"]').forEach(a => { a.href = `mailto:${SITE.email}`; });
-    // The address shown in plain text, for anyone without a mail client set up.
+    // Every email link points at the same place, decided in one place.
+    $$('[data-site="email-link"]').forEach(a => {
+      a.href = contactHref(`Enquiry — ${SITE.name}`);
+      if (useGmail) { a.target = "_blank"; a.rel = "noopener"; }
+    });
+    // The address in plain text, so it can always be copied by hand.
     $$('[data-site-text="email"]').forEach(a => { a.textContent = SITE.email; });
 
     const socials = (SITE.socials || [])
@@ -53,8 +56,27 @@
       .join("");
   }
 
-  const mailtoFor = (subject) =>
-    `mailto:${SITE.email}?subject=${encodeURIComponent(subject)}`;
+  /* Where an "Email me" button points. See SITE.contactMethod in content.js.
+     Gmail's compose URL opens in the browser, so it works for visitors with
+     no mail app set up — which is what mailto: silently fails to do. */
+  const useGmail = SITE.contactMethod !== "mailto";
+
+  function contactHref(subject) {
+    if (!useGmail) {
+      return subject
+        ? `mailto:${SITE.email}?subject=${encodeURIComponent(subject)}`
+        : `mailto:${SITE.email}`;
+    }
+    const url = new URL("https://mail.google.com/mail/");
+    url.searchParams.set("view", "cm");     // compose
+    url.searchParams.set("fs", "1");
+    url.searchParams.set("to", SITE.email);
+    if (subject) url.searchParams.set("su", subject);
+    return url.toString();
+  }
+
+  // A Gmail tab must open in a new tab; a mailto: must not.
+  const contactAttrs = () => useGmail ? ' target="_blank" rel="noopener"' : "";
 
   /* ---------- one row, used by both lists ---------- */
   function row(item, i, kind) {
@@ -73,9 +95,11 @@
       `<a class="btn-ghost" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`);
 
     // Every row gets an enquiry link with the subject already filled in.
-    const enquiry = isWork
-      ? `<a class="btn-ghost" href="${mailtoFor(`About your script — ${item.title}`)}">Email me about this</a>`
-      : `<a class="btn-ghost" href="${mailtoFor(`Enquiry — ${item.title}`)}">Email me about this</a>`;
+    const subject = isWork
+      ? `About your script — ${item.title}`
+      : `Enquiry — ${item.title}`;
+    const enquiry =
+      `<a class="btn-ghost" href="${esc(contactHref(subject))}"${contactAttrs()}>Email me about this</a>`;
 
     const id = `${kind}-${i}`;
 
