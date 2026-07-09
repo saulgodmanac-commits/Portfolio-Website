@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portfolio</title>
+<meta name="description" content="Screenwriter portfolio.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+
+<body class="is-loading">
+
+<div class="loader" id="loader" aria-hidden="true">
+  <div class="loader__count"><span id="count">00</span></div>
+  <div class="loader__bar"><span id="bar"></span></div>
+</div>
+
+<header class="nav">
+  <a class="nav__name" href="#top"><span class="dash">—</span> <span data-site="name">&nbsp;</span></a>
+
+  <a class="nav__mark" href="#top" aria-label="Home">
+    <svg viewBox="0 0 100 100" role="presentation">
+      <circle cx="50" cy="50" r="50" fill="currentColor"/>
+      <path d="M50,0 a50,50 0 0,1 0,100 a25,25 0 0,1 0,-50 a25,25 0 0,0 0,-50" fill="#0c0c0c"/>
+      <circle cx="50" cy="25" r="8" fill="#0c0c0c"/>
+      <circle cx="50" cy="75" r="8" fill="currentColor"/>
+    </svg>
+  </a>
+
+  <nav class="nav__links">
+    <a href="#works" data-scroll>Work<sup id="workCount">0</sup></a>
+    <a href="#services">Services</a>
+    <a href="#about">About</a>
+    <a class="btn-ghost" href="#" data-site="email-link">Email me</a>
+  </nav>
+</header>
+
+<main id="top">
+
+  <section class="hero">
+    <div class="hero__meta">
+      <span class="meta__a" data-site="status">&nbsp;</span>
+      <span class="meta__b" data-site="location">&nbsp;</span>
+      <p class="meta__bio" data-site="bio">&nbsp;</p>
+    </div>
+
+    <h1 class="hero__title">
+      <span class="line"><span class="line__in serif" data-site="name">&nbsp;</span></span>
+      <span class="line"><span class="line__in sans"><i class="tick">.</i><span data-site="role">&nbsp;</span><i class="tick">.</i></span></span>
+    </h1>
+
+    <div class="hero__cta">
+      <button class="yy" id="enter" aria-expanded="false" aria-controls="works">
+        <span class="yy__disc">
+          <svg viewBox="0 0 100 100" role="presentation">
+            <circle cx="50" cy="50" r="50" fill="#f2f2f2"/>
+            <path d="M50,0 a50,50 0 0,1 0,100 a25,25 0 0,1 0,-50 a25,25 0 0,0 0,-50" fill="#0c0c0c"/>
+            <circle cx="50" cy="25" r="8" fill="#0c0c0c"/>
+            <circle cx="50" cy="75" r="8" fill="#f2f2f2"/>
+          </svg>
+        </span>
+        <span class="yy__label" id="enterLabel">See my work</span>
+      </button>
+    </div>
+
+    <div class="hero__socials" data-site="socials"></div>
+  </section>
+
+  <section class="works" id="works" aria-hidden="true">
+    <div class="works__head">
+      <h2>Selected work</h2>
+      <span class="rule"></span>
+      <span class="works__hint">Click a title to read the script</span>
+    </div>
+    <ol class="works__list" id="worksList"></ol>
+  </section>
+
+  <section class="services" id="services">
+    <div class="works__head reveal">
+      <h2>Services</h2>
+      <span class="rule"></span>
+      <span class="works__hint">Click a service to read more</span>
+    </div>
+    <ol class="works__list" id="servicesList"></ol>
+  </section>
+
+  <section class="about reveal" id="about">
+    <h2>About</h2>
+    <div>
+      <p data-site="about">&nbsp;</p>
+      <p class="about__contact">
+        Write to me at
+        <a class="about__email" href="#" data-site="email-link" data-site-text="email">&nbsp;</a>
+      </p>
+      <a class="btn-ghost" href="#" data-site="email-link">Email me</a>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <div class="foot__socials" data-site="socials"></div>
+  <small>© <span id="year"></span> <span data-site="name"></span></small>
+</footer>
+
+<script src="assets/js/content.js"></script>
+<script src="assets/js/main.js"></script>
+</body>
+</html>
