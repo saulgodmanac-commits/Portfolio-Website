@@ -10,7 +10,16 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="Dakunesu' Workplace — Portfolio">
 <meta property="og:description" content="Video scripts, websites and app development, from Denmark and online worldwide.">
+<meta property="og:image" content="assets/icons/favicon-512.png">
 <meta name="twitter:card" content="summary">
+
+<link rel="icon" href="assets/icons/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon-16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="assets/icons/favicon-48.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icons/favicon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#0c0c0c">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -114,8 +123,55 @@
       <span class="rule"></span>
       <span class="works__hint" id="reviewCount"></span>
     </div>
+
+    <div class="rsum reveal" id="reviewsSummary" hidden>
+      <div class="rsum__score">
+        <strong id="avgScore">—</strong>
+        <span class="rsum__outof">out of 5</span>
+      </div>
+      <div class="rsum__meta">
+        <div class="rsum__stars" id="avgStars" aria-hidden="true"></div>
+        <span id="avgCount"></span>
+      </div>
+    </div>
+
     <div class="reviews__grid" id="reviewsList"></div>
-    <div class="reviews__cta reveal">
+    <p class="reviews__status" id="reviewsStatus" hidden></p>
+
+    <!-- Only shown when Supabase is configured in content.js -->
+    <form class="rform reveal" id="reviewForm" hidden novalidate>
+      <h3 class="rform__title">Write a review</h3>
+
+      <fieldset class="rform__stars">
+        <legend>Your rating</legend>
+        <div class="stars" id="starPicker" role="radiogroup" aria-label="Rating out of 5"></div>
+      </fieldset>
+
+      <label class="rform__field">
+        <span>Your name</span>
+        <input type="text" id="rName" maxlength="60" required autocomplete="name" placeholder="Marie L.">
+      </label>
+
+      <label class="rform__field">
+        <span>Your review</span>
+        <textarea id="rComment" maxlength="1000" rows="4" required
+                  placeholder="What did I do for you, and how did it go?"></textarea>
+        <small class="rform__count"><span id="rCount">0</span>/1000</small>
+      </label>
+
+      <!-- Bots fill this in; people never see it. -->
+      <div class="rform__trap" aria-hidden="true">
+        <label>Leave this empty<input type="text" id="rTrap" tabindex="-1" autocomplete="off"></label>
+      </div>
+
+      <div class="rform__foot">
+        <button class="btn-ghost" type="submit" id="rSubmit">Post review</button>
+        <p class="rform__msg" id="rMsg" role="status"></p>
+      </div>
+    </form>
+
+    <!-- Fallback when Supabase is not configured -->
+    <div class="reviews__cta reveal" id="reviewsCta">
       <p id="reviewPrompt"></p>
       <a class="btn-ghost" id="reviewButton" href="#">Leave a review</a>
     </div>

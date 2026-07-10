@@ -375,6 +375,78 @@ body:not(.works-open) .foot{display:none}
 }
 .reviews__cta p{margin:0;color:var(--grey);font-size:.95rem;max-width:48ch}
 .reviews__cta .btn-ghost{flex:none}
+.reviews__cta[hidden],.rform[hidden],.rsum[hidden]{display:none}
+
+/* ---------- rating summary (the App Store block) ---------- */
+.rsum{
+  display:flex;align-items:center;gap:clamp(18px,3vw,40px);
+  padding-bottom:clamp(24px,4vh,44px);margin-bottom:clamp(24px,4vh,44px);
+  border-bottom:1px solid var(--line);
+}
+.rsum__score{display:flex;align-items:baseline;gap:10px}
+.rsum__score strong{
+  font-family:"Cormorant Garamond",serif;font-weight:300;
+  font-size:clamp(3rem,7vw,5.5rem);line-height:1;color:var(--fg);
+}
+.rsum__outof{font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--grey-dim)}
+.rsum__meta{display:flex;flex-direction:column;gap:8px}
+.rsum__stars{letter-spacing:.28em;font-size:1rem;color:var(--fg)}
+.rsum__meta span{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--grey)}
+
+.reviews__status{margin:0 0 24px;font-size:.85rem;color:var(--grey)}
+.reviews__status.is-error{color:#e5a3a3}
+.reviews__status[hidden]{display:none}
+
+/* ---------- the form ---------- */
+.rform{
+  border:1px solid var(--line);border-radius:2px;
+  padding:clamp(24px,3vw,40px);
+  display:grid;gap:clamp(16px,2vw,24px);max-width:640px;
+}
+.rform__title{
+  margin:0;font-size:.75rem;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--grey);font-weight:400;
+}
+.rform__stars{border:0;padding:0;margin:0}
+.rform__stars legend,.rform__field span{
+  font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--grey-dim);margin-bottom:10px;display:block;padding:0;
+}
+.stars{display:flex;gap:6px}
+.star{
+  background:none;border:0;cursor:pointer;padding:2px 4px;
+  font-size:1.7rem;line-height:1;color:var(--line);
+  transition:color .18s,transform .18s var(--ease);
+}
+.star.is-on{color:var(--fg)}
+.star:hover{transform:translateY(-2px)}
+.star:focus-visible{outline:1px solid var(--fg);outline-offset:2px;border-radius:2px}
+
+.rform__field{display:block;position:relative}
+.rform input[type="text"],.rform textarea{
+  width:100%;background:transparent;color:var(--fg);
+  border:1px solid var(--line);border-radius:2px;
+  padding:12px 14px;font:inherit;font-size:.95rem;font-weight:300;
+  transition:border-color .3s;resize:vertical;
+}
+.rform input:focus,.rform textarea:focus{outline:none;border-color:var(--grey)}
+.rform ::placeholder{color:var(--grey-dim)}
+.rform__count{
+  display:block;text-align:right;margin-top:6px;
+  font-size:.66rem;letter-spacing:.12em;color:var(--grey-dim);
+}
+.rform__trap{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+
+.rform__foot{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.rform__foot .btn-ghost{background:none;cursor:pointer;font:inherit;font-size:.8rem}
+.rform__foot .btn-ghost:disabled{opacity:.5;cursor:default}
+.rform__msg{margin:0;font-size:.82rem;color:var(--grey)}
+.rform__msg.is-error{color:#e5a3a3}
+.rform__msg.is-ok{color:#a9d3b0}
+
+@media (max-width:560px){
+  .rsum{flex-direction:column;align-items:flex-start;gap:14px}
+}
 
 /* ---------- about + footer ---------- */
 .about{

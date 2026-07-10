@@ -48,38 +48,221 @@
     }
   }
 
-  /* ---------- reviews ---------- */
-  function renderReviews() {
-    const list   = $("#reviewsList");
-    const count  = $("#reviewCount");
+  /* ================= reviews =================
+     Live mode talks to Supabase's REST API directly — no SDK, no
+     third-party script. Without keys it falls back to the hand-written
+     REVIEWS list and the email button. */
+
+  const liveReviews = Boolean(SUPABASE && SUPABASE.url && SUPABASE.anonKey);
+  const TABLE = "reviews";
+
+  const sbHeaders = () => ({
+    "apikey": SUPABASE.anonKey,
+    "Authorization": `Bearer ${SUPABASE.anonKey}`,
+    "Content-Type": "application/json"
+  });
+
+  const starRow = (n) => "★".repeat(n) + "☆".repeat(5 - n);
+
+  const fmtDate = (iso) => {
+    const d = new Date(iso);
+    return isNaN(d) ? "" : d.toLocaleDateString(undefined,
+      { year: "numeric", month: "short", day: "numeric" });
+  };
+
+  async function fetchReviews() {
+    const url = `${SUPABASE.url}/rest/v1/${TABLE}` +
+                `?select=name,rating,comment,created_at&order=created_at.desc&limit=100`;
+    const res = await fetch(url, { headers: sbHeaders() });
+    if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+    return res.json();
+  }
+
+  async function postReview(review) {
+    const res = await fetch(`${SUPABASE.url}/rest/v1/${TABLE}`, {
+      method: "POST",
+      headers: { ...sbHeaders(), "Prefer": "return=representation" },
+      body: JSON.stringify(review)
+    });
+    if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+    return (await res.json())[0];
+  }
+
+  function paintSummary(reviews) {
+    const box = $("#reviewsSummary");
+    const count = $("#reviewCount");
+
+    if (!reviews.length) {
+      box.hidden = true;
+      count.textContent = "None yet";
+      return;
+    }
+    const rated = reviews.filter(r => r.rating);
+    const avg = rated.length
+      ? rated.reduce((sum, r) => sum + r.rating, 0) / rated.length
+      : 0;
+
+    box.hidden = !rated.length;
+    $("#avgScore").textContent = avg.toFixed(1);
+    $("#avgStars").textContent = starRow(Math.round(avg));
+    $("#avgCount").textContent =
+      `${rated.length} ${rated.length === 1 ? "rating" : "ratings"}`;
+    count.textContent =
+      `${reviews.length} ${reviews.length === 1 ? "review" : "reviews"}`;
+  }
+
+  function paintReviews(reviews) {
+    const list = $("#reviewsList");
+    list.innerHTML = reviews.map((r, i) => {
+      const body = r.comment || r.quote || "";
+      const when = r.created_at ? fmtDate(r.created_at) : (r.role || "");
+      return `
+        <figure class="review" style="--i:${i}">
+          ${r.rating ? `<div class="review__stars" aria-label="${r.rating} out of 5">${starRow(r.rating)}</div>` : ""}
+          <blockquote class="review__quote">${esc(body)}</blockquote>
+          <figcaption class="review__by">
+            <span class="review__name">${esc(r.name)}</span>
+            ${when ? `<span class="review__role">${esc(when)}</span>` : ""}
+          </figcaption>
+        </figure>`;
+    }).join("");
+  }
+
+  function status(msg, kind) {
+    const el = $("#reviewsStatus");
+    el.hidden = !msg;
+    el.textContent = msg || "";
+    el.className = "reviews__status" + (kind ? ` is-${kind}` : "");
+  }
+
+  /* Five buttons, arrow-key navigable, because a rating is a radio group. */
+  function buildStarPicker() {
+    const box = $("#starPicker");
+    let value = 0;
+
+    box.innerHTML = [1, 2, 3, 4, 5].map(n => `
+      <button type="button" class="star" role="radio" aria-checked="false"
+              data-value="${n}" aria-label="${n} star${n > 1 ? "s" : ""}">★</button>`).join("");
+
+    const buttons = $$(".star", box);
+    const paint = (n) => buttons.forEach((b, i) => {
+      b.classList.toggle("is-on", i < n);
+      b.setAttribute("aria-checked", String(i + 1 === n));
+      b.tabIndex = (i + 1 === (n || 1)) ? 0 : -1;
+    });
+
+    const set = (n) => { value = n; paint(n); };
+
+    buttons.forEach((b, i) => {
+      b.addEventListener("click", () => set(i + 1));
+      b.addEventListener("mouseenter", () => paint(i + 1));
+      b.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+          e.preventDefault(); set(Math.min(5, (value || 0) + 1)); buttons[Math.min(4, value - 1)].focus();
+        } else if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+          e.preventDefault(); set(Math.max(1, (value || 1) - 1)); buttons[Math.max(0, value - 1)].focus();
+        }
+      });
+    });
+    box.addEventListener("mouseleave", () => paint(value));
+    paint(0);
+
+    return { get: () => value, reset: () => set(0) };
+  }
+
+  async function initLiveReviews() {
+    const form = $("#reviewForm");
+    const msg  = $("#rMsg");
+    const submit = $("#rSubmit");
+    const nameEl = $("#rName");
+    const textEl = $("#rComment");
+
+    $("#reviewsCta").hidden = true;
+    form.hidden = false;
+
+    const picker = buildStarPicker();
+
+    textEl.addEventListener("input", () => {
+      $("#rCount").textContent = String(textEl.value.length);
+    });
+
+    const load = async () => {
+      status("Loading reviews…");
+      try {
+        const reviews = await fetchReviews();
+        status("");
+        paintSummary(reviews);
+        paintReviews(reviews);
+      } catch (err) {
+        // Say so plainly rather than showing an empty section that looks fine.
+        status("Reviews could not be loaded right now. Please try again later.", "error");
+        paintSummary([]);
+        console.error("[reviews] load failed:", err);
+      }
+    };
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if ($("#rTrap").value) return;              // bot
+
+      const rating = picker.get();
+      const name = nameEl.value.trim();
+      const comment = textEl.value.trim();
+
+      const fail = (text, el) => {
+        msg.textContent = text;
+        msg.className = "rform__msg is-error";
+        if (el) el.focus();
+      };
+      if (!rating)          return fail("Pick a star rating first.");
+      if (name.length < 2)  return fail("Please add your name.", nameEl);
+      if (comment.length < 4) return fail("Please write a few words.", textEl);
+
+      submit.disabled = true;
+      msg.className = "rform__msg";
+      msg.textContent = "Posting…";
+
+      try {
+        await postReview({ name, rating, comment });
+        form.reset();
+        picker.reset();
+        $("#rCount").textContent = "0";
+        msg.className = "rform__msg is-ok";
+        msg.textContent = "Thank you — your review is up.";
+        await load();
+      } catch (err) {
+        msg.className = "rform__msg is-error";
+        msg.textContent = "That didn't send. Please try again in a moment.";
+        console.error("[reviews] post failed:", err);
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    await load();
+  }
+
+  function initStaticReviews() {
     const prompt = $("#reviewPrompt");
     const button = $("#reviewButton");
+
+    $("#reviewForm").hidden = true;
+    $("#reviewsCta").hidden = false;
 
     button.href = contactHref(`Review — ${SITE.name}`);
     if (useGmail) { button.target = "_blank"; button.rel = "noopener"; }
 
-    const stars = (n) => "★".repeat(n) + "☆".repeat(5 - n);
+    paintSummary(REVIEWS);
+    paintReviews(REVIEWS);
 
-    if (!REVIEWS.length) {
-      count.textContent = "None yet";
-      list.innerHTML = "";
-      prompt.textContent =
-        "No reviews yet. If I've worked for you, send one over and it goes up here.";
-      return;
-    }
+    prompt.textContent = REVIEWS.length
+      ? "Worked with me? Send a review and it goes up here."
+      : "No reviews yet. If I've worked for you, send one over and it goes up here.";
+  }
 
-    count.textContent = REVIEWS.length === 1 ? "1 review" : `${REVIEWS.length} reviews`;
-    prompt.textContent = "Worked with me? Send a review and it goes up here.";
-
-    list.innerHTML = REVIEWS.map((r, i) => `
-      <figure class="review reveal" style="--i:${i}">
-        ${r.rating ? `<div class="review__stars" aria-label="${r.rating} out of 5">${stars(r.rating)}</div>` : ""}
-        <blockquote class="review__quote">${esc(r.quote)}</blockquote>
-        <figcaption class="review__by">
-          <span class="review__name">${esc(r.name)}</span>
-          ${r.role ? `<span class="review__role">${esc(r.role)}</span>` : ""}
-        </figcaption>
-      </figure>`).join("");
+  function renderReviews() {
+    if (liveReviews) initLiveReviews();
+    else initStaticReviews();
   }
 
   /* ---------- the script body ----------

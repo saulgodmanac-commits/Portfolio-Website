@@ -336,14 +336,32 @@ const SERVICES = [
 ];
 
 /* ------------------------------------------------------------
-   REVIEWS.
-   These are shown at the bottom of the page. Add one when a real
-   customer sends you one — never invent them.
+   LIVE REVIEWS (Supabase).
+
+   Paste your two values below and visitors can post star reviews
+   straight onto the page. Leave them empty and the section falls
+   back to the hand-written REVIEWS list further down.
+
+   Get them from your Supabase project:
+     Settings -> API -> Project URL, and the "anon public" key.
+
+   The anon key is MEANT to be public — it is in every visitor's
+   browser by design. It is safe only because the table's security
+   rules (the SQL in README.md) limit it to reading and inserting.
+   Never paste the "service_role" key here: that one bypasses all
+   rules and would let anyone wipe your data.
+   ------------------------------------------------------------ */
+
+const SUPABASE = {
+  url:     "",   // e.g. "https://abcdefgh.supabase.co"
+  anonKey: ""    // the long "anon public" key
+};
+
+/* ------------------------------------------------------------
+   HAND-WRITTEN REVIEWS.
+   Only used while SUPABASE above is empty. Never invent these.
 
    { quote: "...", name: "...", role: "...", rating: 5 }
-
-   `role` and `rating` are optional. Leave the list empty and the
-   section shows an invitation to be the first instead.
    ------------------------------------------------------------ */
 
 const REVIEWS = [];

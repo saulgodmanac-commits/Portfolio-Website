@@ -15,8 +15,60 @@ Everything on the page comes from one file: **`assets/js/content.js`**.
 
 ## Reviews
 
-`REVIEWS` starts empty, and the section shows an invitation instead of cards.
-When a real customer sends you one, add it:
+The site has two review modes. It picks automatically.
+
+**Without keys** (how it ships): the section shows the hand-written `REVIEWS`
+list and a "Leave a review" button that emails you.
+
+**With keys**: visitors post star reviews straight onto the page, App Store
+style, and they appear immediately. This needs a free Supabase project.
+
+### Turning on live reviews
+
+1. Make a free project at [supabase.com](https://supabase.com).
+2. Open **SQL Editor** in your project and run this:
+
+```sql
+create table public.reviews (
+  id         uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  name       text not null check (char_length(name) between 1 and 60),
+  rating     int  not null check (rating between 1 and 5),
+  comment    text not null check (char_length(comment) between 1 and 1000)
+);
+
+alter table public.reviews enable row level security;
+
+-- Visitors may read every review, and add new ones. Nothing else.
+create policy "public read"   on public.reviews for select to anon using (true);
+create policy "public insert" on public.reviews for insert to anon with check (true);
+```
+
+3. Go to **Settings → API**. Copy the **Project URL** and the **`anon` public**
+   key into `SUPABASE` at the top of `content.js`.
+4. Push. The form appears by itself.
+
+The checks in that SQL are the real protection: they run on Supabase's server,
+where a visitor cannot reach them. The length limits and the rating range are
+enforced there, not just in the browser.
+
+### Things to know before you switch it on
+
+- **The `anon` key is public.** It sits in the page source for anyone to read.
+  That is how Supabase is designed to work, and it is safe *because* the
+  policies above only permit reading and inserting. **Never** put the
+  `service_role` key in this file — it ignores all policies.
+- **Anyone can post.** You chose instant publishing, so a review appears the
+  moment it is submitted. There is a hidden honeypot field that stops naive
+  bots, but a determined person can still post rubbish. To remove something,
+  open **Table Editor → reviews** in Supabase and delete the row.
+- If you later want reviews to wait for your approval, add an
+  `approved boolean default false` column, change the read policy to
+  `using (approved)`, and tell me — the front-end needs a one-line change.
+
+### Hand-written reviews
+
+Used only while `SUPABASE` is empty:
 
 ```js
 const REVIEWS = [
@@ -25,16 +77,9 @@ const REVIEWS = [
 ];
 ```
 
-`role` and `rating` are optional. **Never invent these.** Made-up testimonials
-are the fastest way to lose the trust of someone deciding whether to pay you,
-and they are illegal to publish in the EU under the Unfair Commercial
-Practices Directive.
-
-Visitors cannot post reviews themselves — this is a static site with no
-database, so there is nowhere to store what they type. The "Leave a review"
-button opens an email to you instead, and you paste anything good into the
-file above. See the note at the bottom of this README if you want live
-comments that visitors post directly.
+**Never invent these.** Made-up testimonials are the fastest way to lose the
+trust of someone deciding whether to pay you, and publishing them is illegal
+in the EU under the Unfair Commercial Practices Directive.
 
 Each `{ ... }` block is one row. To add another, copy a block, paste it,
 change the text. Order matters: the first entry is the first one shown, and
@@ -119,17 +164,8 @@ assets/
   Either way, the address is also printed as selectable text in the About
   section, so it can always be copied by hand.
 
-## If you want visitors to post comments directly
+## The favicon
 
-This site has no server, so there is nothing to save a comment into. Real
-commenting needs a third-party service that stores them for you:
-
-- **Giscus** — free, comments stored as GitHub Discussions. Clean and ad-free,
-  but it requires the repo to be **public**, and commenters need a GitHub
-  account. Not a fit while this repo is private.
-- **Disqus** — free, works on any static site, no repo requirements. Anyone
-  can comment. The free tier shows ads to your visitors.
-- **A form service** (Formspree, Tally) — visitors submit, it lands in your
-  inbox, you publish what you choose. Closest to how the page works today.
-
-Say the word and any of these can be wired in.
+Lives in `assets/icons/`. To change it, replace those files keeping the same
+names. `favicon-512.png` doubles as the image shown when the link is pasted
+into a chat, so keep it square and legible when small.
