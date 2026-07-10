@@ -7,11 +7,40 @@ open `index.html` in a browser and it runs.
 
 Everything on the page comes from one file: **`assets/js/content.js`**.
 
-1. `SITE` at the top — name, role, status, location, description, bio, email, socials.
+1. `SITE` — things that never change with language: your name, email, and
+   which language a first-time visitor sees (`defaultLang`).
 2. `WORKS` — your scripts. These are what the yin-yang button reveals.
-3. `SERVICES` — what people can hire you for. Sits below the scripts.
-4. `SERVICES_NOTE` — the one-line note under the Services heading.
-5. `REVIEWS` — customer reviews, shown near the bottom.
+3. `TEXT` — everything that *does* change with language, in two blocks:
+   `TEXT.en` and `TEXT.uk`.
+4. `REVIEWS` — hand-written reviews, used only when Supabase is switched off.
+
+## Languages
+
+The site is English and Ukrainian. The switch (`EN / UA`) sits in the top-right
+and stays visible on the front door, before the yin-yang is pressed — otherwise
+a Ukrainian visitor would have to read English to find it. The choice is
+remembered in the browser, so a returning visitor gets their language back.
+
+Each language block in `TEXT` has three parts:
+
+- the words about you — `role`, `status`, `location`, `bio`, `about`, `description`
+- `services` — the three services, fully translated including turnaround times
+- `ui` — the wording of the interface itself: menu, headings, form, messages
+
+**The two blocks must have the same shape.** If you add a line to `TEXT.en`,
+add it to `TEXT.uk` as well, or that piece of text will come out blank when
+someone switches.
+
+**Your scripts are deliberately not translated.** They live in `WORKS`, outside
+the language blocks, because they are the writing samples themselves — a client
+hiring an English scriptwriter wants to read your English. The labels around
+them (`Hook`, `Full script`) do translate.
+
+Prices stay as `€5` / `€10` in both languages. Dates under reviews follow the
+chosen language, not the visitor's browser.
+
+To add a third language, copy a whole block in `TEXT`, translate it, and add a
+button to the switch in `index.html` with the matching `data-lang` code.
 
 ## Reviews
 

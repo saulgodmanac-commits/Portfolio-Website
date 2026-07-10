@@ -46,13 +46,23 @@
     </svg>
   </a>
 
-  <nav class="nav__links">
-    <a href="#works" data-scroll>Work<sup id="workCount">0</sup></a>
-    <a href="#services">Services</a>
-    <a href="#reviews">Reviews</a>
-    <a href="#about">About</a>
-    <a class="btn-ghost" href="#" data-site="email-link">Email me</a>
-  </nav>
+  <div class="nav__right">
+    <nav class="nav__links">
+      <a href="#works" data-scroll><span data-i18n="navWork">Work</span><sup id="workCount">0</sup></a>
+      <a href="#services" data-i18n="navServices">Services</a>
+      <a href="#reviews" data-i18n="navReviews">Reviews</a>
+      <a href="#about" data-i18n="navAbout">About</a>
+      <a class="btn-ghost" href="#" data-site="email-link" data-i18n="emailMe">Email me</a>
+    </nav>
+
+    <!-- Stays visible on the front door, so a Ukrainian visitor can
+         switch before deciding whether to press the button. -->
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" class="lang__btn" data-lang="en" aria-pressed="true">EN</button>
+      <span class="lang__sep" aria-hidden="true">/</span>
+      <button type="button" class="lang__btn" data-lang="uk" aria-pressed="false">UA</button>
+    </div>
+  </div>
 </header>
 
 <main id="top">
@@ -88,38 +98,38 @@
 
   <section class="works" id="works" aria-hidden="true">
     <div class="works__head">
-      <h2>Selected work</h2>
+      <h2 data-i18n="selectedWork">Selected work</h2>
       <span class="rule"></span>
-      <span class="works__hint">Click a title to read the script</span>
+      <span class="works__hint" data-i18n="hintWork">Click a title to read the script</span>
     </div>
     <ol class="works__list" id="worksList"></ol>
   </section>
 
   <section class="services" id="services">
     <div class="works__head reveal">
-      <h2>Services</h2>
+      <h2 data-i18n="servicesTitle">Services</h2>
       <span class="rule"></span>
-      <span class="works__hint">Click a service to read more</span>
+      <span class="works__hint" data-i18n="hintService">Click a service to read more</span>
     </div>
     <p class="services__note reveal" id="servicesNote"></p>
     <ol class="works__list" id="servicesList"></ol>
   </section>
 
   <section class="about reveal" id="about">
-    <h2>About</h2>
+    <h2 data-i18n="aboutTitle">About</h2>
     <div>
       <p data-site="about">&nbsp;</p>
       <p class="about__contact">
-        Write to me at
+        <span data-i18n="writeToMe">Write to me at</span>
         <a class="about__email" href="#" data-site="email-link" data-site-text="email">&nbsp;</a>
       </p>
-      <a class="btn-ghost" href="#" data-site="email-link">Email me</a>
+      <a class="btn-ghost" href="#" data-site="email-link" data-i18n="emailMe">Email me</a>
     </div>
   </section>
 
   <section class="reviews" id="reviews">
     <div class="works__head reveal">
-      <h2>Reviews</h2>
+      <h2 data-i18n="reviewsTitle">Reviews</h2>
       <span class="rule"></span>
       <span class="works__hint" id="reviewCount"></span>
     </div>
@@ -127,7 +137,7 @@
     <div class="rsum reveal" id="reviewsSummary" hidden>
       <div class="rsum__score">
         <strong id="avgScore">—</strong>
-        <span class="rsum__outof">out of 5</span>
+        <span class="rsum__outof" data-i18n="outOf5">out of 5</span>
       </div>
       <div class="rsum__meta">
         <div class="rsum__stars" id="avgStars" aria-hidden="true"></div>
@@ -140,32 +150,34 @@
 
     <!-- Only shown when Supabase is configured in content.js -->
     <form class="rform reveal" id="reviewForm" hidden novalidate>
-      <h3 class="rform__title">Write a review</h3>
+      <h3 class="rform__title" data-i18n="writeReview">Write a review</h3>
 
       <fieldset class="rform__stars">
-        <legend>Your rating</legend>
+        <legend data-i18n="yourRating">Your rating</legend>
         <div class="stars" id="starPicker" role="radiogroup" aria-label="Rating out of 5"></div>
       </fieldset>
 
       <label class="rform__field">
-        <span>Your name</span>
-        <input type="text" id="rName" maxlength="60" required autocomplete="name" placeholder="Marie L.">
+        <span data-i18n="yourName">Your name</span>
+        <input type="text" id="rName" maxlength="60" required autocomplete="name"
+               data-i18n-ph="namePlaceholder" placeholder="Marie L.">
       </label>
 
       <label class="rform__field">
-        <span>Your review</span>
+        <span data-i18n="yourReview">Your review</span>
         <textarea id="rComment" maxlength="1000" rows="4" required
+                  data-i18n-ph="reviewPlaceholder"
                   placeholder="What did I do for you, and how did it go?"></textarea>
         <small class="rform__count"><span id="rCount">0</span>/1000</small>
       </label>
 
       <!-- Bots fill this in; people never see it. -->
       <div class="rform__trap" aria-hidden="true">
-        <label>Leave this empty<input type="text" id="rTrap" tabindex="-1" autocomplete="off"></label>
+        <label><span data-i18n="trapLabel">Leave this empty</span><input type="text" id="rTrap" tabindex="-1" autocomplete="off"></label>
       </div>
 
       <div class="rform__foot">
-        <button class="btn-ghost" type="submit" id="rSubmit">Post review</button>
+        <button class="btn-ghost" type="submit" id="rSubmit" data-i18n="postReview">Post review</button>
         <p class="rform__msg" id="rMsg" role="status"></p>
       </div>
     </form>
@@ -173,7 +185,7 @@
     <!-- Fallback when Supabase is not configured -->
     <div class="reviews__cta reveal" id="reviewsCta">
       <p id="reviewPrompt"></p>
-      <a class="btn-ghost" id="reviewButton" href="#">Leave a review</a>
+      <a class="btn-ghost" id="reviewButton" href="#" data-i18n="leaveReview">Leave a review</a>
     </div>
   </section>
 

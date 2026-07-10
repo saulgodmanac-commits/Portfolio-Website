@@ -11,20 +11,43 @@
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
-  /* ---------- fill in the details from SITE ---------- */
+  /* ================= language =================
+     `L` always points at the current language block in TEXT.
+     Everything that reads text goes through it, so switching is
+     a matter of repointing L and re-rendering. */
+
+  const STORE_KEY = "lang";
+  const supported = (code) => Object.prototype.hasOwnProperty.call(TEXT, code);
+
+  function startingLang() {
+    let saved = null;
+    try { saved = localStorage.getItem(STORE_KEY); } catch { /* private mode */ }
+    if (saved && supported(saved)) return saved;
+    return supported(SITE.defaultLang) ? SITE.defaultLang : "en";
+  }
+
+  let lang = startingLang();
+  let L = TEXT[lang];
+  const T = (key) => L.ui[key];
+
+  /* ---------- fill in the details ---------- */
   function hydrate() {
     const set = (key, html) => $$(`[data-site="${key}"]`).forEach(el => { el.innerHTML = html; });
 
     set("name", esc(SITE.name));
-    set("role", esc(SITE.role));
-    set("status", esc(SITE.status));
-    set("location", esc(SITE.location));
-    set("bio", esc(SITE.bio));
-    set("about", esc(SITE.about));
+    set("role", esc(L.role));
+    set("status", esc(L.status));
+    set("location", esc(L.location));
+    set("bio", esc(L.bio));
+    set("about", esc(L.about));
+
+    // Static interface text, swapped by key.
+    $$("[data-i18n]").forEach(el => { el.textContent = T(el.dataset.i18n); });
+    $$("[data-i18n-ph]").forEach(el => { el.placeholder = T(el.dataset.i18nPh); });
 
     // Every email link points at the same place, decided in one place.
     $$('[data-site="email-link"]').forEach(a => {
-      a.href = contactHref(`Enquiry — ${SITE.name}`);
+      a.href = contactHref(`${T("subjEnquiry")} — ${SITE.name}`);
       if (useGmail) { a.target = "_blank"; a.rel = "noopener"; }
     });
     // The address in plain text, so it can always be copied by hand.
@@ -38,14 +61,42 @@
     $("#year").textContent = new Date().getFullYear();
     $("#workCount").textContent = String(WORKS.length).padStart(2, "0");
 
-    $("#servicesNote").textContent = SERVICES_NOTE || "";
-    if (!SERVICES_NOTE) $("#servicesNote").hidden = true;
+    const note = $("#servicesNote");
+    note.textContent = L.servicesNote || "";
+    note.hidden = !L.servicesNote;
 
-    document.title = `${SITE.name} — ${SITE.role}`;
-    if (SITE.description) {
-      const meta = document.querySelector('meta[name="description"]');
-      if (meta) meta.setAttribute("content", SITE.description);
-    }
+    // The yin-yang label depends on whether the site has been opened.
+    const opened = document.body.classList.contains("works-open");
+    $("#enterLabel").textContent = opened ? T("entered") : T("enter");
+
+    document.documentElement.lang = lang;
+    document.title = `${SITE.name} — ${L.role}`;
+    const meta = document.querySelector('meta[name="description"]');
+    if (meta && L.description) meta.setAttribute("content", L.description);
+  }
+
+  /* Repoint L, redraw everything that holds text. */
+  function applyLanguage(code) {
+    if (!supported(code) || code === lang) return;
+    lang = code;
+    L = TEXT[lang];
+    try { localStorage.setItem(STORE_KEY, lang); } catch { /* private mode */ }
+
+    $$(".lang__btn").forEach(b =>
+      b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+
+    hydrate();
+    renderList("#worksList", WORKS, "work");
+    renderList("#servicesList", L.services, "service");
+    renderReviews();
+    watchReveals();   // the redrawn rows need observing again
+  }
+
+  function bindLang() {
+    $$(".lang__btn").forEach(btn => {
+      btn.setAttribute("aria-pressed", String(btn.dataset.lang === lang));
+      btn.addEventListener("click", () => applyLanguage(btn.dataset.lang));
+    });
   }
 
   /* ================= reviews =================
@@ -56,6 +107,9 @@
   const liveReviews = Boolean(SUPABASE && SUPABASE.url && SUPABASE.anonKey);
   const TABLE = "reviews";
 
+  let picker = null;          // the star picker, rebuilt on language change
+  let reviewsBound = false;   // form listeners attached exactly once
+
   const sbHeaders = () => ({
     "apikey": SUPABASE.anonKey,
     "Authorization": `Bearer ${SUPABASE.anonKey}`,
@@ -64,9 +118,10 @@
 
   const starRow = (n) => "★".repeat(n) + "☆".repeat(5 - n);
 
+  // Dates follow the chosen language, not the visitor's browser.
   const fmtDate = (iso) => {
     const d = new Date(iso);
-    return isNaN(d) ? "" : d.toLocaleDateString(undefined,
+    return isNaN(d) ? "" : d.toLocaleDateString(L.locale,
       { year: "numeric", month: "short", day: "numeric" });
   };
 
@@ -94,7 +149,7 @@
 
     if (!reviews.length) {
       box.hidden = true;
-      count.textContent = "None yet";
+      count.textContent = T("noneYet");
       return;
     }
     const rated = reviews.filter(r => r.rating);
@@ -105,10 +160,8 @@
     box.hidden = !rated.length;
     $("#avgScore").textContent = avg.toFixed(1);
     $("#avgStars").textContent = starRow(Math.round(avg));
-    $("#avgCount").textContent =
-      `${rated.length} ${rated.length === 1 ? "rating" : "ratings"}`;
-    count.textContent =
-      `${reviews.length} ${reviews.length === 1 ? "review" : "reviews"}`;
+    $("#avgCount").textContent = T("ratingCount")(rated.length);
+    count.textContent = T("reviewCount")(reviews.length);
   }
 
   function paintReviews(reviews) {
@@ -180,14 +233,12 @@
     $("#reviewsCta").hidden = true;
     form.hidden = false;
 
-    const picker = buildStarPicker();
-
-    textEl.addEventListener("input", () => {
-      $("#rCount").textContent = String(textEl.value.length);
-    });
+    // Rebuilt each time so the star labels follow the language. The submit
+    // handler reads `picker` from this scope, so it always sees the current one.
+    picker = buildStarPicker();
 
     const load = async () => {
-      status("Loading reviews…");
+      status(T("loading"));
       try {
         const reviews = await fetchReviews();
         status("");
@@ -195,72 +246,84 @@
         paintReviews(reviews);
       } catch (err) {
         // Say so plainly rather than showing an empty section that looks fine.
-        status("Reviews could not be loaded right now. Please try again later.", "error");
+        status(T("loadError"), "error");
         paintSummary([]);
         console.error("[reviews] load failed:", err);
       }
     };
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if ($("#rTrap").value) return;              // bot
+    // Listeners attach once. Without this guard, switching language would
+    // bind a second submit handler and post every review twice.
+    if (!reviewsBound) {
+      reviewsBound = true;
 
-      const rating = picker.get();
-      const name = nameEl.value.trim();
-      const comment = textEl.value.trim();
+      textEl.addEventListener("input", () => {
+        $("#rCount").textContent = String(textEl.value.length);
+      });
 
-      const fail = (text, el) => {
-        msg.textContent = text;
-        msg.className = "rform__msg is-error";
-        if (el) el.focus();
-      };
-      if (!rating)          return fail("Pick a star rating first.");
-      if (name.length < 2)  return fail("Please add your name.", nameEl);
-      if (comment.length < 4) return fail("Please write a few words.", textEl);
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if ($("#rTrap").value) return;              // bot
 
-      submit.disabled = true;
-      msg.className = "rform__msg";
-      msg.textContent = "Posting…";
+        const rating = picker.get();
+        const name = nameEl.value.trim();
+        const comment = textEl.value.trim();
 
-      try {
-        await postReview({ name, rating, comment });
-        form.reset();
-        picker.reset();
-        $("#rCount").textContent = "0";
-        msg.className = "rform__msg is-ok";
-        msg.textContent = "Thank you — your review is up.";
-        await load();
-      } catch (err) {
-        msg.className = "rform__msg is-error";
-        msg.textContent = "That didn't send. Please try again in a moment.";
-        console.error("[reviews] post failed:", err);
-      } finally {
-        submit.disabled = false;
-      }
-    });
+        const fail = (text, el) => {
+          msg.textContent = text;
+          msg.className = "rform__msg is-error";
+          if (el) el.focus();
+        };
+        if (!rating)            return fail(T("errRating"));
+        if (name.length < 2)    return fail(T("errName"), nameEl);
+        if (comment.length < 4) return fail(T("errComment"), textEl);
+
+        submit.disabled = true;
+        msg.className = "rform__msg";
+        msg.textContent = T("posting");
+
+        try {
+          await postReview({ name, rating, comment });
+          form.reset();
+          picker.reset();
+          $("#rCount").textContent = "0";
+          msg.className = "rform__msg is-ok";
+          msg.textContent = T("thanks");
+          await load();
+        } catch (err) {
+          msg.className = "rform__msg is-error";
+          msg.textContent = T("errPost");
+          console.error("[reviews] post failed:", err);
+        } finally {
+          submit.disabled = false;
+        }
+      });
+    }
 
     await load();
   }
 
   function initStaticReviews() {
     const prompt = $("#reviewPrompt");
-    const button = $("#reviewButton");
 
     $("#reviewForm").hidden = true;
     $("#reviewsCta").hidden = false;
-
-    button.href = contactHref(`Review — ${SITE.name}`);
-    if (useGmail) { button.target = "_blank"; button.rel = "noopener"; }
 
     paintSummary(REVIEWS);
     paintReviews(REVIEWS);
 
     prompt.textContent = REVIEWS.length
-      ? "Worked with me? Send a review and it goes up here."
-      : "No reviews yet. If I've worked for you, send one over and it goes up here.";
+      ? T("haveReviewsPrompt")
+      : T("noReviewsPrompt");
   }
 
   function renderReviews() {
+    // Set even in live mode: the fallback button is hidden, not removed,
+    // and a hidden element should still hold a real address, never "#".
+    const button = $("#reviewButton");
+    button.href = contactHref(`${T("subjReview")} — ${SITE.name}`);
+    if (useGmail) { button.target = "_blank"; button.rel = "noopener"; }
+
     if (liveReviews) initLiveReviews();
     else initStaticReviews();
   }
@@ -321,24 +384,24 @@
 
     // Every row gets an enquiry link with the subject already filled in.
     const subject = isWork
-      ? `About your script — ${item.title}`
-      : `Enquiry — ${item.title}`;
+      ? `${T("subjScript")} — ${item.title}`
+      : `${T("subjEnquiry")} — ${item.title}`;
     const enquiry =
-      `<a class="btn-ghost" href="${esc(contactHref(subject))}"${contactAttrs()}>Email me about this</a>`;
+      `<a class="btn-ghost" href="${esc(contactHref(subject))}"${contactAttrs()}>${esc(T("emailAboutThis"))}</a>`;
 
     const id = `${kind}-${i}`;
 
     const right = isWork
       ? `${facts ? `<div class="work__facts">${facts}</div>` : ""}
-         ${item.hook ? `<span class="work__label">Hook</span>
+         ${item.hook ? `<span class="work__label">${esc(T("hook"))}</span>
                         <p class="work__synopsis">${esc(item.hook)}</p>` : ""}
-         ${alts ? `<span class="work__label">Other titles</span>
+         ${alts ? `<span class="work__label">${esc(T("otherTitles"))}</span>
                    <ul class="work__bullets">${alts}</ul>` : ""}
          <div class="work__links">${[...custom, enquiry].join("")}</div>`
       : `${facts ? `<div class="work__facts">${facts}</div>` : ""}
-         ${item.details ? `<span class="work__label">Details</span>
+         ${item.details ? `<span class="work__label">${esc(T("details"))}</span>
                            <p class="work__synopsis">${esc(item.details)}</p>` : ""}
-         ${bullets ? `<span class="work__label">What you get</span>
+         ${bullets ? `<span class="work__label">${esc(T("whatYouGet"))}</span>
                       <ul class="work__bullets">${bullets}</ul>` : ""}
          <div class="work__links">${[...custom, enquiry].join("")}</div>`;
 
@@ -363,7 +426,7 @@
             <div>${right}</div>
           </div>
           ${item.script ? `<div class="script">
-              <span class="work__label">Full script</span>
+              <span class="work__label">${esc(T("fullScript"))}</span>
               <div class="script__body">${formatScript(item.script)}</div>
             </div>` : ""}
         </div>
@@ -431,7 +494,7 @@
       document.body.classList.add("works-open");
       works.setAttribute("aria-hidden", "false");
       btn.setAttribute("aria-expanded", "true");
-      label.textContent = "My work";
+      label.textContent = T("entered");
       scrollTo(works);
     };
 
@@ -504,11 +567,12 @@
   document.addEventListener("DOMContentLoaded", () => {
     hydrate();
     renderList("#worksList", WORKS, "work");
-    renderList("#servicesList", SERVICES, "service");
+    renderList("#servicesList", L.services, "service");
     renderReviews();
     watchReveals();          // after render, so the generated rows are seen
     watchScroll();
     bindEnter();
+    bindLang();
     runIntro();
   });
 })();

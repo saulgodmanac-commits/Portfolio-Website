@@ -88,10 +88,27 @@ ol{list-style:none;padding:0}
 .nav__mark{width:26px;color:var(--fg);justify-self:center}
 .nav__mark svg{display:block;width:100%;height:auto;transition:transform 1.2s var(--ease)}
 .nav__mark:hover svg{transform:rotate(180deg)}
-.nav__links{
+.nav__right{
   justify-self:end;display:flex;align-items:center;
+  gap:clamp(16px,2.4vw,36px);
+}
+.nav__links{
+  display:flex;align-items:center;
   gap:clamp(18px,3vw,48px);font-size:.85rem;
 }
+
+/* The switch sits outside .nav__links on purpose: the links are hidden
+   until the yin-yang is pressed, but language must be changeable first. */
+.lang{display:flex;align-items:center;gap:6px}
+.lang__btn{
+  background:none;border:0;padding:2px 1px;cursor:pointer;
+  font:inherit;font-size:.72rem;letter-spacing:.14em;
+  color:var(--grey-dim);transition:color .3s;
+}
+.lang__btn:hover{color:var(--grey)}
+.lang__btn[aria-pressed="true"]{color:var(--fg)}
+.lang__btn:focus-visible{outline:1px solid var(--fg);outline-offset:3px;border-radius:2px}
+.lang__sep{color:var(--line);font-size:.72rem}
 .nav__links a{color:var(--fg);opacity:.85;transition:opacity .3s}
 .nav__links a:hover{opacity:1}
 .nav__links sup{font-size:.6em;color:var(--grey);margin-left:2px}
@@ -487,6 +504,7 @@ body:not(.works-open) .foot{display:none}
   .nav{grid-template-columns:1fr auto;padding-top:18px}
   .nav__mark{display:none}
   .nav__links{gap:20px;font-size:.8rem}
+  .nav__right{gap:14px}
   .btn-ghost{padding:8px 15px;font-size:.72rem}
 }
 @media (max-width:520px){

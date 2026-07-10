@@ -2,33 +2,15 @@
    THE ONLY FILE YOU NEED TO EDIT.
    Everything on the site is generated from what's below.
 
-   SITE     — your details
-   WORKS    — your scripts (the button on the front page opens these)
-   SERVICES — what people can hire you for (further down the page)
+   SITE     — details that are the same in every language
+   TEXT     — everything that changes between English and Ukrainian
+              (bio, About, services, and the wording of the interface)
+   WORKS    — your scripts. Deliberately NOT translated: they are the
+              writing samples themselves, and stay as you wrote them.
    ============================================================ */
 
 const SITE = {
-  name:     "Dakunesu' Workplace",
-  role:     "Digital Services Giver",
-  status:   "Available for work",
-  location: "Based in Denmark — open for online jobs",
-
-  // One line. Used for the browser tab, search results, and link previews.
-  description: "Portfolio of Dakunesu' Workplace — video scripts, websites and " +
-               "app development, from Denmark and online worldwide.",
-
-  // Short paragraph, top-right of the hero.
-  bio: "A portfolio of scripts, websites and apps, out of Denmark and online " +
-       "everywhere. Clear work, quick turnaround, honest prices.",
-
-  // Longer paragraph, About section.
-  about: "This is my portfolio. I write video scripts, build websites, and " +
-         "develop small apps — the kind of digital work that turns a rough " +
-         "thought into something you can actually use. Based in Denmark and " +
-         "working online, so where you are doesn't matter. Small jobs are " +
-         "welcome. Tell me what you need and I'll tell you straight away " +
-         "whether I'm the right person for it.",
-
+  name:  "Dakunesu' Workplace",   // the same in both languages
   email: "saulgodmanac@gmail.com",
 
   // How the "Email me" buttons behave:
@@ -38,6 +20,9 @@ const SITE = {
   //   "mailto" — opens whatever mail app the visitor already uses.
   //              Works for everyone who has one; does nothing for those who don't.
   contactMethod: "gmail",
+
+  // Which language a first-time visitor sees. Their choice is remembered after.
+  defaultLang: "en",
 
   // Add or remove freely. An empty list [] hides the row entirely.
   socials: []
@@ -258,82 +243,273 @@ If this gave you something to act on today, hit subscribe, and I'll see you in t
 ];
 
 /* ------------------------------------------------------------
-   WHAT PEOPLE CAN HIRE YOU FOR.
-   Required : title, summary.   Optional : category, turnaround,
-   price, details, deliverables, links.
+   EVERYTHING THAT CHANGES WITH LANGUAGE.
+
+   Two blocks: `en` and `uk`. They have identical shape, so if you
+   add a line to one, add it to the other.
+
+     hero / about  — the words about you
+     services      — what people can hire you for
+     ui            — the wording of the interface itself
+
+   Your scripts (WORKS above) are not in here on purpose: they are
+   the writing samples, and stay in the language you wrote them in.
    ------------------------------------------------------------ */
 
-// Shown as a single line under the Services heading. Set to "" to hide it.
-const SERVICES_NOTE = "Ideas and concepts come free with any order.";
+const TEXT = {
 
-const SERVICES = [
-  {
-    title:      "Scripts & Writing",
-    category:   "Writing",
-    turnaround: "2–4 days",
-    price:      "€5",
+  /* ===================== ENGLISH ===================== */
+  en: {
+    langLabel: "English",
+    locale: "en-GB",
 
-    summary: "Video scripts written to be spoken out loud — with a hook that holds, " +
-             "a middle that earns attention, and an ending that lands.",
+    role:     "Digital Services Giver",
+    status:   "Available for work",
+    location: "Based in Denmark — open for online jobs",
 
-    details: "Send me the topic and roughly how long the video should run. " +
-             "You get a full script with timestamps, alternative titles, and a " +
-             "description you can paste straight into the upload page. " +
-             "The three scripts higher up this page are examples of the finished work.",
+    // One line. Browser tab, search results, link previews.
+    description: "Portfolio of Dakunesu' Workplace — video scripts, websites and " +
+                 "app development, from Denmark and online worldwide.",
 
-    deliverables: [
-      "Full script, timestamped and ready to record",
-      "Three title options",
-      "A written video description",
-      "Ideas and angles thrown in free",
-      "One round of revisions included"
-    ]
+    // Short paragraph, top-right of the hero.
+    bio: "A portfolio of scripts, websites and apps, out of Denmark and online " +
+         "everywhere. Clear work, quick turnaround, honest prices.",
+
+    // Longer paragraph, About section.
+    about: "This is my portfolio. I write video scripts, build websites, and " +
+           "develop small apps — the kind of digital work that turns a rough " +
+           "thought into something you can actually use. Based in Denmark and " +
+           "working online, so where you are doesn't matter. Small jobs are " +
+           "welcome. Tell me what you need and I'll tell you straight away " +
+           "whether I'm the right person for it.",
+
+    servicesNote: "Ideas and concepts come free with any order.",
+
+    services: [
+      {
+        title: "Scripts & Writing", category: "Writing",
+        turnaround: "2–4 days", price: "€5",
+        summary: "Video scripts written to be spoken out loud — with a hook that holds, " +
+                 "a middle that earns attention, and an ending that lands.",
+        details: "Send me the topic and roughly how long the video should run. " +
+                 "You get a full script with timestamps, alternative titles, and a " +
+                 "description you can paste straight into the upload page. " +
+                 "The three scripts higher up this page are examples of the finished work.",
+        deliverables: [
+          "Full script, timestamped and ready to record",
+          "Three title options",
+          "A written video description",
+          "Ideas and angles thrown in free",
+          "One round of revisions included"
+        ]
+      },
+      {
+        title: "Websites", category: "Design & build",
+        turnaround: "3–7 days", price: "€10",
+        summary: "A simple, fast page that works on a phone as well as a laptop — " +
+                 "and that you can update yourself afterwards.",
+        details: "Best for a portfolio, a landing page, or somewhere to point people " +
+                 "who ask what you do. Nothing you need to maintain, nothing that " +
+                 "breaks. This site is an example of what that looks like.",
+        deliverables: [
+          "Responsive page, mobile and desktop",
+          "Your text, your links, your email button",
+          "Put online for you, or handed over as files",
+          "Ideas and layout concepts thrown in free",
+          "A short guide so you can edit it yourself"
+        ]
+      },
+      {
+        title: "App Development", category: "Build",
+        turnaround: "1–2 weeks", price: "€10",
+        summary: "A small app that does one thing well — a tool, a tracker, a calculator, " +
+                 "something you keep wishing existed.",
+        details: "Best for focused, single-purpose apps rather than anything with " +
+                 "accounts, payments or a server behind it. Tell me what it should do " +
+                 "and I'll tell you honestly whether it fits in this price, or what it " +
+                 "would take if it doesn't.",
+        deliverables: [
+          "A working app you can install and use",
+          "The source files, yours to keep",
+          "Ideas and features suggested free",
+          "One round of changes after you try it"
+        ]
+      }
+    ],
+
+    ui: {
+      navWork: "Work", navServices: "Services", navReviews: "Reviews",
+      navAbout: "About", emailMe: "Email me",
+
+      enter: "See my work", entered: "My work",
+
+      selectedWork: "Selected work",
+      hintWork: "Click a title to read the script",
+      hintService: "Click a service to read more",
+
+      hook: "Hook", otherTitles: "Other titles", fullScript: "Full script",
+      details: "Details", whatYouGet: "What you get",
+      emailAboutThis: "Email me about this",
+
+      servicesTitle: "Services",
+      aboutTitle: "About", writeToMe: "Write to me at",
+
+      reviewsTitle: "Reviews",
+      noneYet: "None yet", outOf5: "out of 5",
+      writeReview: "Write a review",
+      yourRating: "Your rating", yourName: "Your name", yourReview: "Your review",
+      namePlaceholder: "Marie L.",
+      reviewPlaceholder: "What did I do for you, and how did it go?",
+      postReview: "Post review", posting: "Posting…",
+      thanks: "Thank you — your review is up.",
+      errRating: "Pick a star rating first.",
+      errName: "Please add your name.",
+      errComment: "Please write a few words.",
+      errPost: "That didn't send. Please try again in a moment.",
+      loading: "Loading reviews…",
+      loadError: "Reviews could not be loaded right now. Please try again later.",
+      noReviewsPrompt: "No reviews yet. If I've worked for you, send one over and it goes up here.",
+      haveReviewsPrompt: "Worked with me? Send a review and it goes up here.",
+      leaveReview: "Leave a review",
+      trapLabel: "Leave this empty",
+
+      // Email subject lines
+      subjEnquiry: "Enquiry", subjScript: "About your script", subjReview: "Review",
+
+      // n -> "1 review" / "2 reviews"
+      reviewCount: (n) => `${n} ${n === 1 ? "review" : "reviews"}`,
+      ratingCount: (n) => `${n} ${n === 1 ? "rating" : "ratings"}`
+    }
   },
 
-  {
-    title:      "Websites",
-    category:   "Design & build",
-    turnaround: "3–7 days",
-    price:      "€10",
+  /* ===================== УКРАЇНСЬКА ===================== */
+  uk: {
+    langLabel: "Українська",
+    locale: "uk-UA",
 
-    summary: "A simple, fast page that works on a phone as well as a laptop — " +
-             "and that you can update yourself afterwards.",
+    role:     "Цифрові послуги",
+    status:   "Відкритий до роботи",
+    location: "З Данії — працюю онлайн з усім світом",
 
-    details: "Best for a portfolio, a landing page, or somewhere to point people " +
-             "who ask what you do. Nothing you need to maintain, nothing that " +
-             "breaks. This site is an example of what that looks like.",
+    description: "Портфоліо Dakunesu' Workplace — сценарії для відео, сайти та " +
+                 "розробка застосунків. З Данії, онлайн по всьому світу.",
 
-    deliverables: [
-      "Responsive page, mobile and desktop",
-      "Your text, your links, your email button",
-      "Put online for you, or handed over as files",
-      "Ideas and layout concepts thrown in free",
-      "A short guide so you can edit it yourself"
-    ]
-  },
+    bio: "Портфоліо сценаріїв, сайтів і застосунків. З Данії, працюю онлайн " +
+         "будь-де. Зрозуміла робота, швидкі терміни, чесні ціни.",
 
-  {
-    title:      "App Development",
-    category:   "Build",
-    turnaround: "1–2 weeks",
-    price:      "€10",
+    about: "Це моє портфоліо. Я пишу сценарії для відео, роблю сайти та " +
+           "розробляю невеликі застосунки — таку цифрову роботу, що " +
+           "перетворює сиру ідею на щось, чим справді можна користуватися. " +
+           "Живу в Данії, працюю онлайн, тож ваше місто не має значення. " +
+           "Невеликі замовлення вітаються. Напишіть, що вам потрібно, і я " +
+           "одразу скажу, чи я та людина, яка вам підходить.",
 
-    summary: "A small app that does one thing well — a tool, a tracker, a calculator, " +
-             "something you keep wishing existed.",
+    servicesNote: "Ідеї та концепції — безкоштовно до будь-якого замовлення.",
 
-    details: "Best for focused, single-purpose apps rather than anything with " +
-             "accounts, payments or a server behind it. Tell me what it should do " +
-             "and I'll tell you honestly whether it fits in this price, or what it " +
-             "would take if it doesn't.",
+    services: [
+      {
+        title: "Сценарії та тексти", category: "Текст",
+        turnaround: "2–4 дні", price: "€5",
+        summary: "Сценарії для відео, написані так, щоб їх промовляли вголос — " +
+                 "з хуком, що втримує, серединою, що варта уваги, і фіналом, що влучає.",
+        details: "Надішліть тему й приблизну тривалість відео. Ви отримаєте повний " +
+                 "сценарій із таймкодами, варіанти назв і опис, який можна одразу " +
+                 "вставити на сторінку завантаження. Три сценарії вище на цій " +
+                 "сторінці — приклади готової роботи.",
+        deliverables: [
+          "Повний сценарій із таймкодами, готовий до запису",
+          "Три варіанти назви",
+          "Готовий опис для відео",
+          "Ідеї та підходи — безкоштовно",
+          "Один раунд правок включено"
+        ]
+      },
+      {
+        title: "Сайти", category: "Дизайн і розробка",
+        turnaround: "3–7 днів", price: "€10",
+        summary: "Проста і швидка сторінка, що однаково добре працює на телефоні " +
+                 "й на ноутбуці — і яку ви згодом зможете оновлювати самі.",
+        details: "Найкраще підходить для портфоліо, лендингу або сторінки, куди можна " +
+                 "відправити тих, хто питає, чим ви займаєтеся. Нічого не треба " +
+                 "обслуговувати, нічого не ламається. Цей сайт — приклад такої роботи.",
+        deliverables: [
+          "Адаптивна сторінка: телефон і компʼютер",
+          "Ваші тексти, ваші посилання, ваша кнопка пошти",
+          "Розміщу онлайн або передам файлами",
+          "Ідеї та концепції макета — безкоштовно",
+          "Коротка інструкція, щоб редагувати самому"
+        ]
+      },
+      {
+        title: "Розробка застосунків", category: "Розробка",
+        turnaround: "1–2 тижні", price: "€10",
+        summary: "Невеликий застосунок, що добре робить одну річ — інструмент, " +
+                 "трекер, калькулятор, щось, чого вам постійно бракує.",
+        details: "Найкраще для простих застосунків з однією метою, а не для тих, де " +
+                 "потрібні акаунти, оплати чи сервер. Опишіть, що він має робити, і я " +
+                 "чесно скажу, чи вкладається це в цю ціну, а якщо ні — скільки треба.",
+        deliverables: [
+          "Робочий застосунок, який можна встановити",
+          "Вихідні файли залишаються вашими",
+          "Ідеї та функції — підкажу безкоштовно",
+          "Один раунд змін після того, як спробуєте"
+        ]
+      }
+    ],
 
-    deliverables: [
-      "A working app you can install and use",
-      "The source files, yours to keep",
-      "Ideas and features suggested free",
-      "One round of changes after you try it"
-    ]
+    ui: {
+      navWork: "Роботи", navServices: "Послуги", navReviews: "Відгуки",
+      navAbout: "Про мене", emailMe: "Написати",
+
+      enter: "Мої роботи", entered: "Роботи",
+
+      selectedWork: "Вибрані роботи",
+      hintWork: "Натисніть на назву, щоб прочитати сценарій",
+      hintService: "Натисніть на послугу, щоб дізнатися більше",
+
+      hook: "Хук", otherTitles: "Інші назви", fullScript: "Повний сценарій",
+      details: "Деталі", whatYouGet: "Що ви отримаєте",
+      emailAboutThis: "Написати про це",
+
+      servicesTitle: "Послуги",
+      aboutTitle: "Про мене", writeToMe: "Пишіть мені на",
+
+      reviewsTitle: "Відгуки",
+      noneYet: "Поки немає", outOf5: "з 5",
+      writeReview: "Написати відгук",
+      yourRating: "Ваша оцінка", yourName: "Ваше імʼя", yourReview: "Ваш відгук",
+      namePlaceholder: "Марія Л.",
+      reviewPlaceholder: "Що я для вас зробив і як усе пройшло?",
+      postReview: "Опублікувати", posting: "Публікуємо…",
+      thanks: "Дякую — ваш відгук опубліковано.",
+      errRating: "Спершу оберіть оцінку.",
+      errName: "Додайте, будь ласка, своє імʼя.",
+      errComment: "Напишіть, будь ласка, кілька слів.",
+      errPost: "Не вдалося надіслати. Спробуйте ще раз за хвилину.",
+      loading: "Завантажуємо відгуки…",
+      loadError: "Зараз не вдалося завантажити відгуки. Спробуйте пізніше.",
+      noReviewsPrompt: "Відгуків поки немає. Якщо я для вас працював — надішліть відгук, і він зʼявиться тут.",
+      haveReviewsPrompt: "Працювали зі мною? Надішліть відгук, і він зʼявиться тут.",
+      leaveReview: "Залишити відгук",
+      trapLabel: "Залиште це поле порожнім",
+
+      subjEnquiry: "Запит", subjScript: "Про сценарій", subjReview: "Відгук",
+
+      // Ukrainian counts three ways: 1 відгук / 2 відгуки / 5 відгуків
+      reviewCount: (n) => `${n} ${plural(n, "відгук", "відгуки", "відгуків")}`,
+      ratingCount: (n) => `${n} ${plural(n, "оцінка", "оцінки", "оцінок")}`
+    }
   }
-];
+};
+
+/* Ukrainian plural rules. 1 -> one, 2–4 -> few, everything else -> many,
+   with the 11–14 exception that trips up every naive implementation. */
+function plural(n, one, few, many) {
+  const mod10 = n % 10, mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+  return many;
+}
 
 /* ------------------------------------------------------------
    LIVE REVIEWS (Supabase).
