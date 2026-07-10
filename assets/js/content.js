@@ -353,8 +353,8 @@ const SERVICES = [
    ------------------------------------------------------------ */
 
 const SUPABASE = {
-  url:     "",   // e.g. "https://abcdefgh.supabase.co"
-  anonKey: ""    // the long "anon public" key
+  url:     "https://smsbimmgnzdxxtibwszq.supabase.co",
+  anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtc2JpbW1nbnpkeHh0aWJ3c3pxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2MzMyNzcsImV4cCI6MjA5OTIwOTI3N30.bf0slX6GvqdBdOlooKiO_uF1J4cMmf1c6hJHddpPl3A"
 };
 
 /* ------------------------------------------------------------

@@ -408,7 +408,9 @@ body:not(.works-open) .foot{display:none}
   color:var(--grey);font-weight:400;
 }
 .rform__stars{border:0;padding:0;margin:0}
-.rform__stars legend,.rform__field span{
+/* Direct child only — otherwise this also hits the <span> inside the
+   character counter and breaks it onto two lines. */
+.rform__stars legend,.rform__field > span{
   font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;
   color:var(--grey-dim);margin-bottom:10px;display:block;padding:0;
 }
