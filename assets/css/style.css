@@ -195,6 +195,7 @@ ol{list-style:none;padding:0}
    these sections set for themselves further down this file. */
 body:not(.works-open) .works,
 body:not(.works-open) .services,
+body:not(.works-open) .reviews,
 body:not(.works-open) .about,
 body:not(.works-open) .foot{display:none}
 
@@ -209,7 +210,13 @@ body:not(.works-open) .foot{display:none}
 .works-open .nav__links{opacity:1;pointer-events:auto}
 
 /* The nav is fixed, so scrolled-to sections must stop below it. */
-.works,.services,.about{scroll-margin-top:clamp(76px,10vh,104px)}
+.works,.services,.reviews,.about{scroll-margin-top:clamp(76px,10vh,104px)}
+
+.services__note{
+  margin:-8px 0 clamp(28px,4vh,44px);
+  font-size:.8rem;letter-spacing:.02em;color:var(--grey);
+}
+.services__note::before{content:"— ";color:var(--grey-dim)}
 
 .works__head{display:flex;align-items:center;gap:24px;margin-bottom:clamp(28px,5vh,56px)}
 .works__head h2,.about h2{
@@ -338,6 +345,37 @@ body:not(.works-open) .foot{display:none}
 .script__body::-webkit-scrollbar{width:2px}
 .script__body::-webkit-scrollbar-thumb{background:var(--line)}
 
+/* ---------- reviews ---------- */
+.reviews{padding:clamp(60px,12vh,140px) var(--pad) 0}
+.reviews__grid{
+  display:grid;gap:clamp(16px,2vw,28px);
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  margin-bottom:clamp(30px,5vh,56px);
+}
+.reviews__grid:empty{display:none;margin:0}   /* no reviews, no gap */
+.review{
+  margin:0;padding:clamp(24px,2.6vw,36px);
+  border:1px solid var(--line);border-radius:2px;
+  display:flex;flex-direction:column;gap:16px;
+  transition:border-color .4s;
+}
+.review:hover{border-color:var(--grey-dim)}
+.review__stars{letter-spacing:.3em;font-size:.8rem;color:var(--fg)}
+.review__quote{
+  margin:0;font-family:"Cormorant Garamond",serif;
+  font-size:clamp(1.1rem,1.5vw,1.4rem);line-height:1.5;color:var(--fg);
+}
+.review__by{display:flex;flex-direction:column;gap:4px;margin-top:auto}
+.review__name{font-size:.85rem;color:var(--fg)}
+.review__role{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--grey-dim)}
+
+.reviews__cta{
+  display:flex;flex-wrap:wrap;align-items:center;gap:clamp(14px,2vw,28px);
+  padding-top:clamp(10px,2vh,20px);
+}
+.reviews__cta p{margin:0;color:var(--grey);font-size:.95rem;max-width:48ch}
+.reviews__cta .btn-ghost{flex:none}
+
 /* ---------- about + footer ---------- */
 .about{
   padding:clamp(70px,14vh,160px) var(--pad);
@@ -361,6 +399,7 @@ body:not(.works-open) .foot{display:none}
 /* ---------- responsive ---------- */
 @media (max-width:860px){
   .nav__links a[href="#about"],
+  .nav__links a[href="#reviews"],
   .nav__links a[href="#services"]{display:none}
   .hero__meta{grid-template-columns:1fr}
   .meta__bio{grid-column:1;justify-self:start;text-align:left;max-width:100%}

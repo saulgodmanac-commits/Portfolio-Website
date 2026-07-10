@@ -3,8 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Portfolio</title>
-<meta name="description" content="Screenwriter portfolio.">
+<title>Dakunesu' Workplace — Portfolio</title>
+<meta name="description" content="Portfolio of Dakunesu' Workplace — video scripts, websites and app development, from Denmark and online worldwide.">
+
+<!-- Link previews, when the URL is pasted into a chat or social post. -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Dakunesu' Workplace — Portfolio">
+<meta property="og:description" content="Video scripts, websites and app development, from Denmark and online worldwide.">
+<meta name="twitter:card" content="summary">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,6 +40,7 @@
   <nav class="nav__links">
     <a href="#works" data-scroll>Work<sup id="workCount">0</sup></a>
     <a href="#services">Services</a>
+    <a href="#reviews">Reviews</a>
     <a href="#about">About</a>
     <a class="btn-ghost" href="#" data-site="email-link">Email me</a>
   </nav>
@@ -85,6 +92,7 @@
       <span class="rule"></span>
       <span class="works__hint">Click a service to read more</span>
     </div>
+    <p class="services__note reveal" id="servicesNote"></p>
     <ol class="works__list" id="servicesList"></ol>
   </section>
 
@@ -97,6 +105,19 @@
         <a class="about__email" href="#" data-site="email-link" data-site-text="email">&nbsp;</a>
       </p>
       <a class="btn-ghost" href="#" data-site="email-link">Email me</a>
+    </div>
+  </section>
+
+  <section class="reviews" id="reviews">
+    <div class="works__head reveal">
+      <h2>Reviews</h2>
+      <span class="rule"></span>
+      <span class="works__hint" id="reviewCount"></span>
+    </div>
+    <div class="reviews__grid" id="reviewsList"></div>
+    <div class="reviews__cta reveal">
+      <p id="reviewPrompt"></p>
+      <a class="btn-ghost" id="reviewButton" href="#">Leave a review</a>
     </div>
   </section>
 

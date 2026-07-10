@@ -7,9 +7,34 @@ open `index.html` in a browser and it runs.
 
 Everything on the page comes from one file: **`assets/js/content.js`**.
 
-1. `SITE` at the top — name, role, status, location, bio, email, social links.
+1. `SITE` at the top — name, role, status, location, description, bio, email, socials.
 2. `WORKS` — your scripts. These are what the yin-yang button reveals.
 3. `SERVICES` — what people can hire you for. Sits below the scripts.
+4. `SERVICES_NOTE` — the one-line note under the Services heading.
+5. `REVIEWS` — customer reviews, shown near the bottom.
+
+## Reviews
+
+`REVIEWS` starts empty, and the section shows an invitation instead of cards.
+When a real customer sends you one, add it:
+
+```js
+const REVIEWS = [
+  { quote: "He rewrote my script in two days and it doubled my watch time.",
+    name: "Marie L.", role: "YouTube creator", rating: 5 }
+];
+```
+
+`role` and `rating` are optional. **Never invent these.** Made-up testimonials
+are the fastest way to lose the trust of someone deciding whether to pay you,
+and they are illegal to publish in the EU under the Unfair Commercial
+Practices Directive.
+
+Visitors cannot post reviews themselves — this is a static site with no
+database, so there is nowhere to store what they type. The "Leave a review"
+button opens an email to you instead, and you paste anything good into the
+file above. See the note at the bottom of this README if you want live
+comments that visitors post directly.
 
 Each `{ ... }` block is one row. To add another, copy a block, paste it,
 change the text. Order matters: the first entry is the first one shown, and
@@ -93,3 +118,18 @@ assets/
 
   Either way, the address is also printed as selectable text in the About
   section, so it can always be copied by hand.
+
+## If you want visitors to post comments directly
+
+This site has no server, so there is nothing to save a comment into. Real
+commenting needs a third-party service that stores them for you:
+
+- **Giscus** — free, comments stored as GitHub Discussions. Clean and ad-free,
+  but it requires the repo to be **public**, and commenters need a GitHub
+  account. Not a fit while this repo is private.
+- **Disqus** — free, works on any static site, no repo requirements. Anyone
+  can comment. The free tier shows ads to your visitors.
+- **A form service** (Formspree, Tally) — visitors submit, it lands in your
+  inbox, you publish what you choose. Closest to how the page works today.
+
+Say the word and any of these can be wired in.

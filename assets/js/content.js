@@ -13,16 +13,21 @@ const SITE = {
   status:   "Available for work",
   location: "Based in Denmark — open for online jobs",
 
+  // One line. Used for the browser tab, search results, and link previews.
+  description: "Portfolio of Dakunesu' Workplace — video scripts, websites and " +
+               "app development, from Denmark and online worldwide.",
+
   // Short paragraph, top-right of the hero.
-  bio: "Scripts, ideas and digital work, out of Denmark and online everywhere. " +
-       "Clear writing, quick turnaround, honest prices.",
+  bio: "A portfolio of scripts, websites and apps, out of Denmark and online " +
+       "everywhere. Clear work, quick turnaround, honest prices.",
 
   // Longer paragraph, About section.
-  about: "I write video scripts and help people turn a rough thought into " +
-         "something they can actually use — a script, an idea, a working page. " +
-         "Based in Denmark, working online, so where you are doesn't matter. " +
-         "Small jobs are welcome. Tell me what you need and I'll tell you " +
-         "straight away whether I'm the right person for it.",
+  about: "This is my portfolio. I write video scripts, build websites, and " +
+         "develop small apps — the kind of digital work that turns a rough " +
+         "thought into something you can actually use. Based in Denmark and " +
+         "working online, so where you are doesn't matter. Small jobs are " +
+         "welcome. Tell me what you need and I'll tell you straight away " +
+         "whether I'm the right person for it.",
 
   email: "saulgodmanac@gmail.com",
 
@@ -258,32 +263,15 @@ If this gave you something to act on today, hit subscribe, and I'll see you in t
    price, details, deliverables, links.
    ------------------------------------------------------------ */
 
+// Shown as a single line under the Services heading. Set to "" to hide it.
+const SERVICES_NOTE = "Ideas and concepts come free with any order.";
+
 const SERVICES = [
-  {
-    title:      "Good Ideas",
-    category:   "Ideas & concepts",
-    turnaround: "1–2 days",
-    price:      "From €5",
-
-    summary: "You know roughly what you want to make, but not what to make it about. " +
-             "Tell me the topic and I'll come back with ideas worth using.",
-
-    details: "Video concepts, titles, hooks, business names, content angles — " +
-             "the part people get stuck on before anything else can start. " +
-             "You get several options, not one, so you have something to choose between.",
-
-    deliverables: [
-      "A set of ideas you can act on straight away",
-      "Titles and hooks written out, not just described",
-      "One round of rework if none of them land"
-    ]
-  },
-
   {
     title:      "Scripts & Writing",
     category:   "Writing",
     turnaround: "2–4 days",
-    price:      "From €15",
+    price:      "€5",
 
     summary: "Video scripts written to be spoken out loud — with a hook that holds, " +
              "a middle that earns attention, and an ending that lands.",
@@ -297,6 +285,7 @@ const SERVICES = [
       "Full script, timestamped and ready to record",
       "Three title options",
       "A written video description",
+      "Ideas and angles thrown in free",
       "One round of revisions included"
     ]
   },
@@ -305,7 +294,7 @@ const SERVICES = [
     title:      "Websites",
     category:   "Design & build",
     turnaround: "3–7 days",
-    price:      "From €15",
+    price:      "€10",
 
     summary: "A simple, fast page that works on a phone as well as a laptop — " +
              "and that you can update yourself afterwards.",
@@ -318,7 +307,43 @@ const SERVICES = [
       "Responsive page, mobile and desktop",
       "Your text, your links, your email button",
       "Put online for you, or handed over as files",
+      "Ideas and layout concepts thrown in free",
       "A short guide so you can edit it yourself"
+    ]
+  },
+
+  {
+    title:      "App Development",
+    category:   "Build",
+    turnaround: "1–2 weeks",
+    price:      "€10",
+
+    summary: "A small app that does one thing well — a tool, a tracker, a calculator, " +
+             "something you keep wishing existed.",
+
+    details: "Best for focused, single-purpose apps rather than anything with " +
+             "accounts, payments or a server behind it. Tell me what it should do " +
+             "and I'll tell you honestly whether it fits in this price, or what it " +
+             "would take if it doesn't.",
+
+    deliverables: [
+      "A working app you can install and use",
+      "The source files, yours to keep",
+      "Ideas and features suggested free",
+      "One round of changes after you try it"
     ]
   }
 ];
+
+/* ------------------------------------------------------------
+   REVIEWS.
+   These are shown at the bottom of the page. Add one when a real
+   customer sends you one — never invent them.
+
+   { quote: "...", name: "...", role: "...", rating: 5 }
+
+   `role` and `rating` are optional. Leave the list empty and the
+   section shows an invitation to be the first instead.
+   ------------------------------------------------------------ */
+
+const REVIEWS = [];

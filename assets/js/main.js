@@ -37,7 +37,49 @@
 
     $("#year").textContent = new Date().getFullYear();
     $("#workCount").textContent = String(WORKS.length).padStart(2, "0");
+
+    $("#servicesNote").textContent = SERVICES_NOTE || "";
+    if (!SERVICES_NOTE) $("#servicesNote").hidden = true;
+
     document.title = `${SITE.name} — ${SITE.role}`;
+    if (SITE.description) {
+      const meta = document.querySelector('meta[name="description"]');
+      if (meta) meta.setAttribute("content", SITE.description);
+    }
+  }
+
+  /* ---------- reviews ---------- */
+  function renderReviews() {
+    const list   = $("#reviewsList");
+    const count  = $("#reviewCount");
+    const prompt = $("#reviewPrompt");
+    const button = $("#reviewButton");
+
+    button.href = contactHref(`Review — ${SITE.name}`);
+    if (useGmail) { button.target = "_blank"; button.rel = "noopener"; }
+
+    const stars = (n) => "★".repeat(n) + "☆".repeat(5 - n);
+
+    if (!REVIEWS.length) {
+      count.textContent = "None yet";
+      list.innerHTML = "";
+      prompt.textContent =
+        "No reviews yet. If I've worked for you, send one over and it goes up here.";
+      return;
+    }
+
+    count.textContent = REVIEWS.length === 1 ? "1 review" : `${REVIEWS.length} reviews`;
+    prompt.textContent = "Worked with me? Send a review and it goes up here.";
+
+    list.innerHTML = REVIEWS.map((r, i) => `
+      <figure class="review reveal" style="--i:${i}">
+        ${r.rating ? `<div class="review__stars" aria-label="${r.rating} out of 5">${stars(r.rating)}</div>` : ""}
+        <blockquote class="review__quote">${esc(r.quote)}</blockquote>
+        <figcaption class="review__by">
+          <span class="review__name">${esc(r.name)}</span>
+          ${r.role ? `<span class="review__role">${esc(r.role)}</span>` : ""}
+        </figcaption>
+      </figure>`).join("");
   }
 
   /* ---------- the script body ----------
@@ -280,6 +322,7 @@
     hydrate();
     renderList("#worksList", WORKS, "work");
     renderList("#servicesList", SERVICES, "service");
+    renderReviews();
     watchReveals();          // after render, so the generated rows are seen
     watchScroll();
     bindEnter();
