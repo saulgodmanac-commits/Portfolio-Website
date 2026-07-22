@@ -19,7 +19,24 @@
 <link rel="icon" type="image/png" sizes="48x48" href="assets/icons/favicon-48.png">
 <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/favicon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon.png">
-<meta name="theme-color" content="#0c0c0c">
+<meta name="theme-color" content="#f6f6f4">
+
+<!-- Runs before the first paint. Without it a visitor whose system is dark
+     sees a white page flash before the theme is applied. Must stay inline
+     and stay here: an external file would arrive too late. -->
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem("theme");
+      if (t !== "light" && t !== "dark") {
+        t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+      document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {
+      document.documentElement.setAttribute("data-theme", "light");
+    }
+  })();
+</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,39 +46,52 @@
 
 <body class="is-loading">
 
-<div class="loader" id="loader" aria-hidden="true">
-  <div class="loader__count"><span id="count">00</span></div>
-  <div class="loader__bar"><span id="bar"></span></div>
-</div>
-
 <header class="nav">
   <a class="nav__name" href="#top"><span class="dash">—</span> <span data-site="name">&nbsp;</span></a>
 
   <a class="nav__mark" href="#top" aria-label="Home">
     <svg viewBox="0 0 100 100" role="presentation">
-      <circle cx="50" cy="50" r="50" fill="currentColor"/>
-      <path d="M50,0 a50,50 0 0,1 0,100 a25,25 0 0,1 0,-50 a25,25 0 0,0 0,-50" fill="#0c0c0c"/>
-      <circle cx="50" cy="25" r="8" fill="#0c0c0c"/>
-      <circle cx="50" cy="75" r="8" fill="currentColor"/>
+      <circle cx="50" cy="50" r="50" class="yy-a"/>
+      <path d="M50,0 a50,50 0 0,1 0,100 a25,25 0 0,1 0,-50 a25,25 0 0,0 0,-50" class="yy-b"/>
+      <circle cx="50" cy="25" r="8" class="yy-b"/>
+      <circle cx="50" cy="75" r="8" class="yy-a"/>
     </svg>
   </a>
 
   <div class="nav__right">
     <nav class="nav__links">
-      <a href="#works" data-scroll><span data-i18n="navWork">Work</span><sup id="workCount">0</sup></a>
-      <a href="#services" data-i18n="navServices">Services</a>
-      <a href="#reviews" data-i18n="navReviews">Reviews</a>
-      <a href="#about" data-i18n="navAbout">About</a>
-      <a class="btn-ghost" href="#" data-site="email-link" data-i18n="emailMe">Email me</a>
+      <a href="#works" data-hint="hintNavWork"><span data-i18n="navWork">Work</span><sup id="workCount">0</sup></a>
+      <a href="#services" data-i18n="navServices" data-hint="hintNavServices">Services</a>
+      <a href="#about" data-i18n="navAbout" data-hint="hintNavAbout">About</a>
+
+      <!-- Deliberately louder than its neighbours: it is the one people
+           are least likely to look for and most persuaded by. -->
+      <a class="nav__reviews" href="#reviews" data-hint="hintNavReviews">
+        <span class="nav__reviews-star" aria-hidden="true">★</span>
+        <span data-i18n="navReviews">Reviews</span>
+        <span class="nav__reviews-score" id="navScore" hidden></span>
+      </a>
+
+      <a class="btn-ghost" href="#" data-site="email-link" data-i18n="emailMe" data-hint="hintEmail">Email me</a>
     </nav>
 
     <!-- Stays visible on the front door, so a Ukrainian visitor can
          switch before deciding whether to press the button. -->
     <div class="lang" role="group" aria-label="Language">
-      <button type="button" class="lang__btn" data-lang="en" aria-pressed="true">EN</button>
+      <button type="button" class="lang__btn" data-lang="en" aria-pressed="true" data-hint="hintLangEn">EN</button>
       <span class="lang__sep" aria-hidden="true">/</span>
-      <button type="button" class="lang__btn" data-lang="uk" aria-pressed="false">UA</button>
+      <button type="button" class="lang__btn" data-lang="uk" aria-pressed="false" data-hint="hintLangUk">UA</button>
     </div>
+
+    <button type="button" class="theme" id="themeBtn" aria-pressed="false" data-hint="hintTheme">
+      <span class="theme__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" class="theme__ring"/>
+          <path d="M12 2 a10 10 0 0 1 0 20 z" class="theme__half"/>
+        </svg>
+      </span>
+      <span class="visually-hidden" data-i18n="themeLabel">Switch colours</span>
+    </button>
   </div>
 </header>
 
@@ -80,17 +110,22 @@
     </h1>
 
     <div class="hero__cta">
-      <button class="yy" id="enter" aria-expanded="false" aria-controls="works">
+      <button class="yy" id="enter" aria-expanded="false" aria-controls="works" data-hint="hintEnter">
         <span class="yy__disc">
           <svg viewBox="0 0 100 100" role="presentation">
-            <circle cx="50" cy="50" r="50" fill="#f2f2f2"/>
-            <path d="M50,0 a50,50 0 0,1 0,100 a25,25 0 0,1 0,-50 a25,25 0 0,0 0,-50" fill="#0c0c0c"/>
-            <circle cx="50" cy="25" r="8" fill="#0c0c0c"/>
-            <circle cx="50" cy="75" r="8" fill="#f2f2f2"/>
+            <circle cx="50" cy="50" r="50" class="yy-a"/>
+            <path d="M50,0 a50,50 0 0,1 0,100 a25,25 0 0,1 0,-50 a25,25 0 0,0 0,-50" class="yy-b"/>
+            <circle cx="50" cy="25" r="8" class="yy-b"/>
+            <circle cx="50" cy="75" r="8" class="yy-a"/>
           </svg>
         </span>
         <span class="yy__label" id="enterLabel">See my work</span>
       </button>
+    </div>
+
+    <div class="scrollcue" aria-hidden="true">
+      <span class="scrollcue__line"></span>
+      <span data-i18n="scrollCue">Scroll</span>
     </div>
 
     <div class="hero__socials" data-site="socials"></div>

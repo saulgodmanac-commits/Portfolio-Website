@@ -171,14 +171,28 @@ assets/
 
 ## Notes
 
-- The first screen is a door: name, role and the yin-yang, nothing else.
-  The menu, the scripts, the services, the About section and the footer are
-  all hidden — and the page cannot even scroll — until the button is pressed.
+- The first screen is a door: name, role and the yin-yang. The sections
+  below stay hidden until the visitor comes in — but the **menu is always
+  visible**, a **Scroll** cue sits under the button, and **scrolling, swiping
+  up, or pressing any menu item** opens the site just as the button does.
+  An earlier version hid the menu too, and a client reported being unable to
+  navigate; that is what these three extra ways in are for.
+- Section order is Work, Reviews, Services, About. Reviews sit high on
+  purpose: social proof lands before the price list.
+- The palette lives in the CSS variables at the top of `style.css`. It is a
+  light theme; swapping `--bg` and `--fg` (plus `--bg-blur`, `--glow` and
+  `--ring`) is all it takes to go back to dark. The yin-yang is drawn with
+  those variables rather than fixed colours, so it stays correct either way.
+- There is no loading screen. On arrival the yin-yang falls in from above,
+  overshoots slightly, bounces once and settles; its label fades in after it
+  lands. The whole thing is CSS (`@keyframes yy-drop`), so nothing can hang
+  waiting for JavaScript.
+- `data-theme` is set by a small inline script in `<head>`, before the first
+  paint. It has to stay inline and stay there — an external file arrives too
+  late, and a dark-mode visitor gets a white flash.
 - The headline is sized against screen height as well as width, so the
   yin-yang button stays above the fold on short laptop screens. If you make
   the name much longer, check it still fits.
-- The intro has a fallback timer, so the loading screen can't get stuck if
-  the page opens in a background tab.
 - Everything respects `prefers-reduced-motion`: animations are skipped for
   visitors who ask their system for that.
 - The "Email me" buttons open **Gmail's compose window in a new tab**, with

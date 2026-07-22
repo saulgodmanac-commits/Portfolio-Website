@@ -341,7 +341,23 @@ const TEXT = {
       navWork: "Work", navServices: "Services", navReviews: "Reviews",
       navAbout: "About", emailMe: "Email me",
 
-      enter: "See my work", entered: "My work",
+      enter: "See my work", entered: "My work", scrollCue: "Scroll",
+      // Little hints shown on hover / keyboard focus.
+      themeLabel: "Switch colours",
+      hintEnter: "Opens my work, services and reviews",
+      hintNavWork: "Read my video scripts",
+      hintNavServices: "What I do and what it costs",
+      hintNavAbout: "Who I am and how to reach me",
+      hintNavReviews: "What clients said — and leave your own",
+      hintEmail: "Opens Gmail with my address filled in",
+      hintLangEn: "Switch the site to English",
+      hintLangUk: "Перемкнути сайт на українську",
+      hintTheme: "Switch between light and dark",
+      hintRow: "Click to open",
+      hintRowOpen: "Click to close",
+      hintStar: "Click to rate",
+      hintPost: "Publishes your review straight away",
+
 
       selectedWork: "Selected work",
       hintWork: "Click a title to read the script",
@@ -461,7 +477,23 @@ const TEXT = {
       navWork: "Роботи", navServices: "Послуги", navReviews: "Відгуки",
       navAbout: "Про мене", emailMe: "Написати",
 
-      enter: "Мої роботи", entered: "Роботи",
+      enter: "Мої роботи", entered: "Роботи", scrollCue: "Гортайте",
+      // Підказки, що показуються при наведенні.
+      themeLabel: "Змінити кольори",
+      hintEnter: "Відкриє мої роботи, послуги та відгуки",
+      hintNavWork: "Почитати мої сценарії",
+      hintNavServices: "Що я роблю і скільки це коштує",
+      hintNavAbout: "Хто я і як зі мною звʼязатися",
+      hintNavReviews: "Що кажуть клієнти — і залиште свій відгук",
+      hintEmail: "Відкриє Gmail з моєю адресою",
+      hintLangEn: "Switch the site to English",
+      hintLangUk: "Перемкнути сайт на українську",
+      hintTheme: "Перемкнути світлу і темну тему",
+      hintRow: "Натисніть, щоб відкрити",
+      hintRowOpen: "Натисніть, щоб закрити",
+      hintStar: "Натисніть, щоб оцінити",
+      hintPost: "Публікує ваш відгук одразу",
+
 
       selectedWork: "Вибрані роботи",
       hintWork: "Натисніть на назву, щоб прочитати сценарій",
