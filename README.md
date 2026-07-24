@@ -243,6 +243,33 @@ phone. If you add a translatable label inside a script row, give it a
 
 Measured on a 6x-throttled CPU, all scripts expanded, ~18,000px page:
 60fps scrolling on desktop and mobile, and every interaction under 30ms.
+
+## The background
+
+Three fixed layers on `body`: a soft highlight where the headline sits, a
+deeper corner opposite it, and a linear fade underneath. All of it comes from
+CSS variables, so the light and dark themes each get their own wash.
+
+Because the layers are `fixed`, the light belongs to the *window*, not the
+page — the deepest area is always the bottom of the screen, wherever you have
+scrolled to. If you make the gradient stronger, re-check contrast against the
+**painted pixels**, not the flat `--bg` value: the two are no longer the same.
+
+The light theme needs care. A white wash on a near-white base is invisible —
+the first attempt looked completely flat. It reads now because `--bg` sits
+*below* white, so the top wash has somewhere to fall to. Resist making the
+foot darker to get more contrast: the deep corner is where the small grey
+labels live, and past about `.22` on `--wash-2` they drop under 4.5:1.
+Measured, the deepest corner is ~`rgb(220,216,207)` and `--grey-dim` clears
+it at 4.52:1 — there is very little headroom, so change one and re-measure.
+
+## A trap worth knowing
+
+Each `.work` row builds its own stacking context, so a `z-index` inside a row
+cannot rise above a *later* row. That is why the hover tooltip was getting a
+line struck through it — the next row's 1px top border was painting over it.
+The fix is `.work:hover{position:relative;z-index:5}`, lifting the whole row.
+Anything else that needs to overflow a row will hit the same wall.
 - The headline is sized against screen height as well as width, so the
   yin-yang button stays above the fold on short laptop screens. If you make
   the name much longer, check it still fits.

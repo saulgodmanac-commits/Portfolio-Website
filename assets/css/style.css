@@ -1,15 +1,24 @@
 /* ---------- tokens ---------- */
 :root{
-  --bg:#f6f6f4;
-  --bg-top:#fdfdfc;      /* the fade runs light at the top ... */
-  --bg-bot:#e8e6e0;      /* ... and settles warmer at the bottom */
+  /* The base sits a little below white on purpose: the top wash is pure white,
+     and it can only read as a pool of light if there is somewhere to fall to.
+     An earlier version put white on near-white and looked completely flat. */
+  --bg:#f0eeea;
+  --bg-top:#ffffff;      /* light falls from above ... */
+  --bg-bot:#e8e5de;      /* ... and settles warmer at the foot */
+  --wash-1:rgba(255,255,255,.95);   /* pool of light behind the headline */
+  /* Deliberately gentle. The gradient reads because the top is pure white
+     against a base that sits below it — not because the foot is dark. Pushing
+     this past ~.22 drops the small grey labels under 4.5:1 in that corner. */
+  --wash-2:rgba(168,159,142,.22);   /* warm shadow, lower right */
   --fg:#141414;
   --fg-strong:#000;
-  --grey:#5f5f5c;
-  /* Not lighter than this: below roughly #6e6e69 the small uppercase labels
-     drop under the 4.5:1 contrast floor and become genuinely hard to read. */
-  --grey-dim:#6e6e69;
-  --line:#dcdcd6;
+  --grey:#5a5a56;
+  /* Kept a shade darker than it looks like it needs to be: the small uppercase
+     labels must clear 4.5:1 against the *deepest* corner of the wash, not
+     against the flat --bg. Measured, not guessed. */
+  --grey-dim:#5f5f59;
+  --line:#d6d5cd;
   --bg-blur:rgba(246,246,244,.86);
   --glow:rgba(0,0,0,.10);
   --ring:rgba(0,0,0,.16);
@@ -22,9 +31,11 @@
 /* The dark half of the switch. Only the colours change — every rule below
    reads these variables, so nothing else needs a dark-mode counterpart. */
 :root[data-theme="dark"]{
-  --bg:#0c0c0c;
-  --bg-top:#181818;
-  --bg-bot:#050505;
+  --bg:#0d0d0e;
+  --bg-top:#1b1b1e;      /* a pool of light at the top ... */
+  --bg-bot:#040404;      /* ... falling away to near-black at the foot */
+  --wash-1:rgba(140,142,160,.16);   /* cool glow behind the headline */
+  --wash-2:rgba(0,0,0,.55);         /* deepens the lower right */
   --fg:#f2f2f2;
   --fg-strong:#fff;
   --grey:#9a9a9a;
@@ -86,11 +97,16 @@ body,.nav,.btn-ghost,.review,.rform,.work,.script__body{
 html{scroll-behavior:smooth}
 body{
   margin:0;
-  /* Fixed, so the fade belongs to the window rather than sliding past as
-     you scroll — otherwise a long page repeats the gradient. */
-  background:var(--bg);
-  background-image:linear-gradient(175deg,var(--bg-top) 0%,var(--bg) 48%,var(--bg-bot) 100%);
+  /* Three layers: a soft highlight where the headline sits, a deeper corner
+     opposite it, and the base fade underneath. Fixed, so the light belongs to
+     the window rather than sliding past — otherwise it repeats down the page. */
+  background-color:var(--bg);
+  background-image:
+    radial-gradient(115% 75% at 50% -8%,  var(--wash-1) 0%, transparent 62%),
+    radial-gradient(95% 65% at 108% 102%, var(--wash-2) 0%, transparent 60%),
+    linear-gradient(172deg, var(--bg-top) 0%, var(--bg) 46%, var(--bg-bot) 100%);
   background-attachment:fixed;
+  background-repeat:no-repeat;
   color:var(--fg);
   font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   font-weight:300;
@@ -254,6 +270,12 @@ ol{list-style:none;padding:0}
 /* Rows are full width, so anchor their hint to the left edge instead. */
 .work__bar[data-hint-text]::after{left:0;transform:translate(0,4px);top:calc(100% - 14px)}
 .work__bar[data-hint-text]:hover::after{transform:translate(0,0)}
+
+/* The tooltip hangs below its row, and every row builds its own stacking
+   context — so the *next* row used to paint its 1px top border straight
+   through the tooltip, like a strikethrough. Lift the active row instead. */
+.work:hover,
+.work:focus-within{position:relative;z-index:5}
 
 /* Nothing useful to hover with a finger, and it would sit under the thumb. */
 @media (hover:none){
