@@ -288,19 +288,39 @@ const TEXT = {
     services: [
       {
         title: "Scripts & Writing", category: "Writing",
-        turnaround: "2–4 days", price: "€5",
+        turnaround: "2–4 days", price: "From €5",
+
+        // Priced by finished video length. Shown as a small table in the panel.
+        tiers: [
+          { label: "Up to 10 min", price: "€5" },
+          { label: "10–20 min",    price: "€10" },
+          { label: "20 min +",     price: "€20" }
+        ],
+
         summary: "Video scripts written to be spoken out loud — with a hook that holds, " +
-                 "a middle that earns attention, and an ending that lands.",
-        details: "Send me the topic and roughly how long the video should run. " +
+                 "a middle that earns attention, and an ending that lands. " +
+                 "Priced by how long the finished video runs.",
+        details: "Send me the topic, roughly how long the video should run, and a " +
+                 "link to a video or two of yours so I can hear how you actually talk. " +
                  "You get a full script with timestamps, alternative titles, and a " +
                  "description you can paste straight into the upload page. " +
                  "The three scripts higher up this page are examples of the finished work.",
+
+        // Straight about the deliverable: a strong draft in the client's voice,
+        // not a teleprompter file. Overpromising here is what gets refunds.
+        note: "To be straight with you: what you get is a strong draft written as " +
+              "close to your voice as I can get it — not a script to read word for " +
+              "word off the page. Expect to change a line here and there so it " +
+              "sounds like you. That is normal, and the revision round below is " +
+              "there for exactly that.",
+
         deliverables: [
-          "Full script, timestamped and ready to record",
+          "Full script with timestamps, structured start to finish",
+          "Written to match how you speak, as closely as I can get it",
           "Three title options",
           "A written video description",
           "Ideas and angles thrown in free",
-          "One round of revisions included"
+          "One round of revisions to fine-tune the wording"
         ]
       },
       {
@@ -321,7 +341,7 @@ const TEXT = {
       },
       {
         title: "App Development", category: "Build",
-        turnaround: "1–2 weeks", price: "€10",
+        turnaround: "1–2 weeks", price: "€20",
         summary: "A small app that does one thing well — a tool, a tracker, a calculator, " +
                  "something you keep wishing existed.",
         details: "Best for focused, single-purpose apps rather than anything with " +
@@ -341,7 +361,7 @@ const TEXT = {
       navWork: "Work", navServices: "Services", navReviews: "Reviews",
       navAbout: "About", emailMe: "Email me",
 
-      enter: "See my work", entered: "My work", scrollCue: "Scroll",
+      enter: "See my work", entered: "My work", pressMe: "Press me",
       // Little hints shown on hover / keyboard focus.
       themeLabel: "Switch colours",
       hintEnter: "Opens my work, services and reviews",
@@ -364,7 +384,7 @@ const TEXT = {
       hintService: "Click a service to read more",
 
       hook: "Hook", otherTitles: "Other titles", fullScript: "Full script",
-      details: "Details", whatYouGet: "What you get",
+      details: "Details", whatYouGet: "What you get", pricing: "Pricing",
       emailAboutThis: "Email me about this",
 
       servicesTitle: "Services",
@@ -425,19 +445,36 @@ const TEXT = {
     services: [
       {
         title: "Сценарії та тексти", category: "Текст",
-        turnaround: "2–4 дні", price: "€5",
+        turnaround: "2–4 дні", price: "Від €5",
+
+        // Ціна залежить від тривалості готового відео.
+        tiers: [
+          { label: "До 10 хв",  price: "€5" },
+          { label: "10–20 хв",  price: "€10" },
+          { label: "20 хв +",   price: "€20" }
+        ],
+
         summary: "Сценарії для відео, написані так, щоб їх промовляли вголос — " +
-                 "з хуком, що втримує, серединою, що варта уваги, і фіналом, що влучає.",
-        details: "Надішліть тему й приблизну тривалість відео. Ви отримаєте повний " +
+                 "з хуком, що втримує, серединою, що варта уваги, і фіналом, що влучає. " +
+                 "Ціна залежить від тривалості готового відео.",
+        details: "Надішліть тему, приблизну тривалість відео та посилання на одне-два " +
+                 "своїх відео, щоб я почув, як ви говорите. Ви отримаєте повний " +
                  "сценарій із таймкодами, варіанти назв і опис, який можна одразу " +
                  "вставити на сторінку завантаження. Три сценарії вище на цій " +
                  "сторінці — приклади готової роботи.",
+
+        note: "Скажу чесно: ви отримуєте міцний чорновик, написаний максимально " +
+              "близько до вашої манери, — а не текст, який читають слово в слово " +
+              "з аркуша. Десь доведеться змінити рядок, щоб звучало саме як ви. " +
+              "Це нормально, і раунд правок нижче — саме для цього.",
+
         deliverables: [
-          "Повний сценарій із таймкодами, готовий до запису",
+          "Повний сценарій із таймкодами, від початку до кінця",
+          "Написаний під вашу манеру, наскільки це можливо",
           "Три варіанти назви",
           "Готовий опис для відео",
           "Ідеї та підходи — безкоштовно",
-          "Один раунд правок включено"
+          "Один раунд правок, щоб доточити формулювання"
         ]
       },
       {
@@ -458,7 +495,7 @@ const TEXT = {
       },
       {
         title: "Розробка застосунків", category: "Розробка",
-        turnaround: "1–2 тижні", price: "€10",
+        turnaround: "1–2 тижні", price: "€20",
         summary: "Невеликий застосунок, що добре робить одну річ — інструмент, " +
                  "трекер, калькулятор, щось, чого вам постійно бракує.",
         details: "Найкраще для простих застосунків з однією метою, а не для тих, де " +
@@ -477,7 +514,7 @@ const TEXT = {
       navWork: "Роботи", navServices: "Послуги", navReviews: "Відгуки",
       navAbout: "Про мене", emailMe: "Написати",
 
-      enter: "Мої роботи", entered: "Роботи", scrollCue: "Гортайте",
+      enter: "Мої роботи", entered: "Роботи", pressMe: "Натисніть",
       // Підказки, що показуються при наведенні.
       themeLabel: "Змінити кольори",
       hintEnter: "Відкриє мої роботи, послуги та відгуки",
@@ -500,7 +537,7 @@ const TEXT = {
       hintService: "Натисніть на послугу, щоб дізнатися більше",
 
       hook: "Хук", otherTitles: "Інші назви", fullScript: "Повний сценарій",
-      details: "Деталі", whatYouGet: "Що ви отримаєте",
+      details: "Деталі", whatYouGet: "Що ви отримаєте", pricing: "Ціни",
       emailAboutThis: "Написати про це",
 
       servicesTitle: "Послуги",

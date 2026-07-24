@@ -48,11 +48,11 @@ body,.nav,.btn-ghost,.review,.rform,.work,.script__body{
 /* Small, wide-tracked capitals go thin and spindly at weight 300 — the very
    text a visitor has to read to navigate. Everything under ~0.8rem gets more
    weight; the big display type stays light. */
-.hero__meta,.meta__bio,.yy__label,.scrollcue,.works__hint,.works__head h2,
+.hero__meta,.meta__bio,.yy__label,.presscue,.works__hint,.works__head h2,
 .work__num,.work__tags,.work__facts span,.work__label,.script__h,
 .rsum__outof,.rsum__meta span,.review__role,.review__stars,.rsum__stars,
 .rform__title,.rform__stars legend,.rform__field > span,.rform__count,
-.services__note,.nav__links,.nav__name,.lang__btn,.foot small,
+.services__note,.nav__links,.lang__btn,.foot small,
 .btn-ghost,.reviews__status,.rform__msg{
   font-weight:500;
 }
@@ -66,6 +66,21 @@ body,.nav,.btn-ghost,.review,.rform,.work,.script__body{
   position:absolute;width:1px;height:1px;margin:-1px;padding:0;
   overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
 }
+
+/* Shown only when JavaScript is off. `body.is-loading` hides everything else,
+   so this has to lift that itself. */
+.noscript{
+  position:fixed;inset:0;z-index:200;
+  display:flex;flex-direction:column;justify-content:center;
+  gap:18px;padding:var(--pad);
+  background:var(--bg);color:var(--fg);
+}
+.noscript h1{
+  font-family:"Cormorant Garamond",serif;font-weight:300;
+  font-size:clamp(1.8rem,5vw,3rem);text-transform:uppercase;letter-spacing:.02em;
+}
+.noscript p{max-width:52ch;line-height:1.8;color:var(--grey);font-weight:400}
+.noscript a{color:var(--fg);border-bottom:1px solid var(--line)}
 
 *,*::before,*::after{box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -122,7 +137,10 @@ ol{list-style:none;padding:0}
   border-bottom:1px solid var(--line);
   padding-top:16px;padding-bottom:16px;
 }
+/* Weight 400, not 500: only Cormorant 300 and 400 are loaded, and asking
+   for 500 makes the browser synthesise a smeared faux-bold. */
 .nav__name{
+  font-weight:400;
   justify-self:start;          /* hug the text, don't stretch across the column */
   font-family:"Cormorant Garamond",serif;
   font-size:.95rem;letter-spacing:.14em;text-transform:uppercase;
@@ -249,6 +267,9 @@ ol{list-style:none;padding:0}
   display:inline-flex;align-items:center;gap:2px;
   padding:6px 14px;border-radius:999px;
   border:1px solid var(--line);
+  /* Ukrainian labels are two words ("Про мене") and wrapped inside the pill,
+     leaving one item taller than the rest. */
+  white-space:nowrap;
   transition:border-color .3s,background-color .3s,color .3s,transform .3s var(--ease);
 }
 .nav__links a:hover{
@@ -331,7 +352,6 @@ ol{list-style:none;padding:0}
 }
 
 /* The label waits for the disc to land before it appears. */
-.yy__label{opacity:0}
 .is-ready .yy__label{animation:fade-up .7s var(--ease) 1.25s both}
 @keyframes fade-up{
   from{opacity:0;transform:translateY(8px)}
@@ -353,6 +373,7 @@ ol{list-style:none;padding:0}
 .yy:focus-visible{outline:none}
 .yy:focus-visible .yy__disc{box-shadow:0 0 0 2px var(--fg)}
 .yy__label{
+  opacity:0;                     /* revealed by the fade-up below */
   font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--grey);
   transition:color .3s;
 }
@@ -371,27 +392,52 @@ ol{list-style:none;padding:0}
 }
 .works-open .yy__disc::after{display:none}
 
-/* A quiet "there is more below" cue, so the gate never reads as a dead end. */
-.scrollcue{
+/* "Press me" — the yin-yang is the only way in, so the cue sits under it and
+   its light travels upward, back toward the button. */
+.presscue{
   display:flex;flex-direction:column;align-items:center;gap:8px;
   margin-bottom:clamp(16px,3vh,28px);
   font-size:.62rem;letter-spacing:.24em;text-transform:uppercase;
-  color:var(--grey-dim);
+  color:var(--grey);
   opacity:0;transition:opacity .8s var(--ease);
 }
-.is-ready .scrollcue{opacity:1;transition-delay:1.3s}
-.works-open .scrollcue{opacity:0;pointer-events:none}
-.scrollcue__line{
+.is-ready .presscue{opacity:1;transition-delay:1.5s}
+/* transition-delay:0 matters — otherwise the 1.5s entrance delay also applies
+   on the way out and the cue hangs around for seconds after entry. */
+.works-open .presscue{opacity:0;pointer-events:none;transition-delay:0s}
+.presscue__line{
   width:1px;height:34px;background:var(--line);position:relative;overflow:hidden;
 }
-.scrollcue__line::after{
+.presscue__line::after{
   content:"";position:absolute;inset:0;background:var(--fg);
-  animation:trickle 2.4s var(--ease) infinite;
+  animation:trickle-up 2.4s var(--ease) infinite;
 }
-@keyframes trickle{
-  0%{transform:translateY(-100%)}
-  60%,100%{transform:translateY(100%)}
+@keyframes trickle-up{
+  0%{transform:translateY(100%)}
+  60%,100%{transform:translateY(-100%)}
 }
+
+/* ---------- don't animate what nobody can see ----------
+   The yin-yang's spin and the cue's travelling light are infinite loops. Left
+   running they keep the compositor busy on every scrolled frame even when the
+   hero is far off-screen — measured, this was the only real source of dropped
+   frames while scrolling. `is-away` is set once the hero leaves the viewport. */
+.is-away .yy__disc svg,
+.is-away .yy__disc::after,
+.is-away .presscue__line::after{animation-play-state:paused}
+
+/* Once the site is open the cue is invisible, so stop it outright. */
+.works-open .presscue__line::after{animation:none}
+
+/* Fired when someone tries a menu item before coming in: the button jumps
+   so the eye lands on it, instead of the click doing nothing at all. */
+.yy.is-nudged .yy__disc{animation:nudge .7s var(--ease)}
+@keyframes nudge{
+  0%,100%{transform:scale(1)}
+  25%{transform:scale(1.14)}
+  55%{transform:scale(.97)}
+}
+.yy.is-nudged .yy__label{color:var(--fg)}
 .works-open .yy__disc{transform:rotate(180deg)}
 
 /* ---------- works ---------- */
@@ -449,9 +495,11 @@ body:not(.works-open) .foot{display:none}
   transition:opacity .8s var(--ease),transform .8s var(--ease);}
 .reveal.is-in{opacity:1;transform:none}
 
+/* num | title | tags | price | +   — the price column is empty on script
+   rows, which is fine: the track simply collapses to nothing. */
 .work__bar{
   width:100%;background:none;border:0;cursor:pointer;color:inherit;
-  display:grid;grid-template-columns:auto 1fr auto auto;
+  display:grid;grid-template-columns:auto 1fr auto auto auto;
   align-items:baseline;gap:clamp(14px,3vw,40px);
   padding:clamp(20px,3vh,34px) 0;text-align:left;
   transition:padding-left .5s var(--ease),color .4s;
@@ -466,8 +514,35 @@ body:not(.works-open) .foot{display:none}
 .work.is-open .work__bar{padding-left:14px}
 .work.is-open .work__title{color:var(--fg-strong)}
 .work__tags{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--grey)}
+
+/* Visible without opening the row: the price is the strongest thing on offer
+   and used to be buried inside the panel. */
+.work__price{
+  font-size:.95rem;font-weight:500;color:var(--fg);
+  font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.work__bar:hover .work__price,
+.work.is-open .work__price{color:var(--fg-strong)}
+
 .work__sign{font-size:1.1rem;color:var(--grey);transition:transform .5s var(--ease)}
 .work.is-open .work__sign{transform:rotate(45deg)}
+
+/* ---------- price tiers ---------- */
+.tiers{list-style:none;padding:0;margin:0 0 28px;max-width:34ch}
+.tier{
+  display:flex;align-items:baseline;gap:10px;
+  padding:7px 0;border-bottom:1px solid var(--line);
+}
+.tier:last-child{border-bottom:0}
+.tier__label{font-size:.9rem;color:var(--grey);white-space:nowrap}
+.tier__dots{
+  flex:1;height:1px;align-self:center;
+  background:repeating-linear-gradient(90deg,var(--line) 0 2px,transparent 2px 5px);
+}
+.tier__price{
+  font-size:1rem;font-weight:500;color:var(--fg);
+  font-variant-numeric:tabular-nums;
+}
 
 .work__panel{
   max-height:0;overflow:hidden;
@@ -526,6 +601,15 @@ body:not(.works-open) .foot{display:none}
   content:"";position:absolute;left:0;top:.62em;
   width:8px;height:1px;background:var(--grey-dim);
 }
+/* Plain-speaking note about what the client is actually getting. Set apart
+   with a rule so it reads as candour rather than small print. */
+.work__note{
+  margin:0 0 26px;padding-left:clamp(14px,1.6vw,20px);
+  border-left:2px solid var(--line);
+  font-size:.9rem;line-height:1.8;font-weight:400;color:var(--grey);
+  max-width:52ch;
+}
+
 .work__links{display:flex;flex-wrap:wrap;gap:12px}
 
 /* ---------- the script itself ---------- */
@@ -682,8 +766,16 @@ body:not(.works-open) .foot{display:none}
   .nav__links{gap:clamp(12px,2.6vw,22px);font-size:.78rem}
   .hero__meta{grid-template-columns:1fr}
   .meta__bio{grid-column:1;justify-self:start;text-align:left;max-width:100%}
-  .work__bar{grid-template-columns:auto 1fr auto;row-gap:6px}
-  .work__tags{grid-column:2/4;font-size:.66rem}
+  /* A scroll box inside a page is a thumb trap on touch: dragging inside it
+     scrolls the script instead of the page. Let it flow instead. */
+  .script__body{max-height:none;overflow-y:visible;}
+
+  /* num | title | +  on the first line, tags and price wrapping beneath. */
+  .work__bar{grid-template-columns:auto 1fr auto;row-gap:8px}
+  .work__title{grid-column:2}
+  .work__sign{grid-column:3;grid-row:1}
+  .work__tags{grid-column:2/4;grid-row:2;font-size:.66rem}
+  .work__price{grid-column:2/4;grid-row:3;font-size:1.05rem}
   .work__inner{grid-template-columns:1fr}
   .about{grid-template-columns:1fr}
 }

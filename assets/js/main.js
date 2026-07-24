@@ -57,6 +57,12 @@
       a.href = contactHref(`${T("subjEnquiry")} — ${SITE.name}`);
       if (useGmail) { a.target = "_blank"; a.rel = "noopener"; }
     });
+    // Per-row enquiry links: the subject is translated, the title is not.
+    $$("[data-subj-key]").forEach(a => {
+      a.href = contactHref(`${T(a.dataset.subjKey)} — ${a.dataset.subjTitle}`);
+      if (useGmail) { a.target = "_blank"; a.rel = "noopener"; }
+    });
+
     // The address in plain text, so it can always be copied by hand.
     $$('[data-site-text="email"]').forEach(a => { a.textContent = SITE.email; });
 
@@ -94,11 +100,14 @@
     $$(".lang__btn").forEach(b =>
       b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
 
+    // The scripts themselves are identical in both languages, so their rows
+    // are left standing and hydrate() just swaps the labels around them.
+    // Rebuilding them meant re-parsing thousands of words of HTML and blocked
+    // the main thread for ~60ms on a slow phone.
     hydrate();
-    renderList("#worksList", WORKS, "work");
     renderList("#servicesList", L.services, "service");
     renderReviews();
-    watchReveals();   // the redrawn rows need observing again
+    watchReveals();   // the redrawn service rows need observing again
   }
 
   function bindLang() {
@@ -155,7 +164,12 @@
      tooltip on top of the styled one. */
   function applyHints() {
     $$("[data-hint]").forEach(el => {
-      const text = T(el.dataset.hint);
+      // An already-open row says "click to close", so don't reset it to
+      // "click to open" just because the language changed.
+      const key = (el.dataset.hint === "hintRow" &&
+                   el.getAttribute("aria-expanded") === "true")
+        ? "hintRowOpen" : el.dataset.hint;
+      const text = T(key);
       if (text) el.setAttribute("data-hint-text", text);
     });
   }
@@ -411,8 +425,20 @@
 
   /* ---------- the script body ----------
      Escape first, then apply the small subset of markdown the scripts use:
-     ### headings and **bold**. Blank lines separate paragraphs. */
+     ### headings and **bold**. Blank lines separate paragraphs.
+
+     Cached: the scripts never change, but a language switch re-renders every
+     row, and re-parsing thousands of words each time is wasted work. */
+  const scriptCache = new Map();
+
   function formatScript(raw) {
+    if (scriptCache.has(raw)) return scriptCache.get(raw);
+    const html = buildScript(raw);
+    scriptCache.set(raw, html);
+    return html;
+  }
+
+  function buildScript(raw) {
     return esc(raw)
       .split(/\n{2,}/)
       .map(block => {
@@ -454,36 +480,52 @@
     const tags = (isWork ? [item.category, item.length] : [item.category, item.turnaround])
       .filter(Boolean).map(esc).join(" &nbsp;/&nbsp; ");
 
-    const facts = (isWork ? [item.length] : [item.price, item.turnaround])
+    // The turnaround already sits in the row's tag line, so don't repeat it.
+    const facts = (isWork ? [item.length] : [item.turnaround])
       .filter(Boolean).map(f => `<span>${esc(f)}</span>`).join("");
 
     const bullets = (item.deliverables || []).map(d => `<li>${esc(d)}</li>`).join("");
     const alts    = (item.altTitles || []).map(t => `<li>${esc(t)}</li>`).join("");
 
+    // Priced by tier (e.g. scripts, by video length) — rendered as a table.
+    const tiers = (item.tiers || []).map(t => `
+      <li class="tier">
+        <span class="tier__label">${esc(t.label)}</span>
+        <span class="tier__dots" aria-hidden="true"></span>
+        <span class="tier__price">${esc(t.price)}</span>
+      </li>`).join("");
+
     const custom = (item.links || []).map(l =>
       `<a class="btn-ghost" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`);
 
     // Every row gets an enquiry link with the subject already filled in.
-    const subject = isWork
-      ? `${T("subjScript")} — ${item.title}`
-      : `${T("subjEnquiry")} — ${item.title}`;
+    // The data-subj-* attributes let hydrate() re-point the address on a
+    // language switch without rebuilding the row.
+    const subjKey = isWork ? "subjScript" : "subjEnquiry";
+    const subject = `${T(subjKey)} — ${item.title}`;
     const enquiry =
-      `<a class="btn-ghost" href="${esc(contactHref(subject))}"${contactAttrs()}>${esc(T("emailAboutThis"))}</a>`;
+      `<a class="btn-ghost" href="${esc(contactHref(subject))}"${contactAttrs()}
+          data-i18n="emailAboutThis"
+          data-subj-key="${subjKey}" data-subj-title="${esc(item.title)}"
+       >${esc(T("emailAboutThis"))}</a>`;
 
     const id = `${kind}-${i}`;
 
     const right = isWork
       ? `${facts ? `<div class="work__facts">${facts}</div>` : ""}
-         ${item.hook ? `<span class="work__label">${esc(T("hook"))}</span>
+         ${item.hook ? `<span class="work__label" data-i18n="hook">${esc(T("hook"))}</span>
                         <p class="work__synopsis">${esc(item.hook)}</p>` : ""}
-         ${alts ? `<span class="work__label">${esc(T("otherTitles"))}</span>
+         ${alts ? `<span class="work__label" data-i18n="otherTitles">${esc(T("otherTitles"))}</span>
                    <ul class="work__bullets">${alts}</ul>` : ""}
          <div class="work__links">${[...custom, enquiry].join("")}</div>`
       : `${facts ? `<div class="work__facts">${facts}</div>` : ""}
+         ${tiers ? `<span class="work__label">${esc(T("pricing"))}</span>
+                    <ul class="tiers">${tiers}</ul>` : ""}
          ${item.details ? `<span class="work__label">${esc(T("details"))}</span>
                            <p class="work__synopsis">${esc(item.details)}</p>` : ""}
          ${bullets ? `<span class="work__label">${esc(T("whatYouGet"))}</span>
                       <ul class="work__bullets">${bullets}</ul>` : ""}
+         ${item.note ? `<p class="work__note">${esc(item.note)}</p>` : ""}
          <div class="work__links">${[...custom, enquiry].join("")}</div>`;
 
     const summary = isWork ? item.description : item.summary;
@@ -499,16 +541,18 @@
           <span class="work__num">${String(i + 1).padStart(2, "0")}</span>
           <span class="work__title">${esc(item.title)}</span>
           <span class="work__tags">${tags}</span>
+          ${item.price ? `<span class="work__price">${esc(item.price)}</span>` : ""}
           <span class="work__sign" aria-hidden="true">+</span>
         </button>
 
-        <div class="work__panel" id="panel-${id}" role="region">
+        <div class="work__panel" id="panel-${id}" role="region"
+             aria-label="${esc(item.title)}">
           <div class="work__inner">
             <div><p class="work__logline">${esc(summary)}</p></div>
             <div>${right}</div>
           </div>
           ${item.script ? `<div class="script">
-              <span class="work__label">${esc(T("fullScript"))}</span>
+              <span class="work__label" data-i18n="fullScript">${esc(T("fullScript"))}</span>
               <div class="script__body">${formatScript(item.script)}</div>
             </div>` : ""}
         </div>
@@ -517,8 +561,28 @@
 
   function renderList(sel, items, kind) {
     const list = $(sel);
+
+    // A language switch rebuilds these rows; don't shut a panel the visitor
+    // was reading. Remember which were open and put them back.
+    const wasOpen = $$(".work", list).reduce(
+      (acc, el, i) => (el.classList.contains("is-open") ? acc.concat(i) : acc), []);
+
     list.innerHTML = items.map((item, i) => row(item, i, kind)).join("");
-    $$(".work__bar", list).forEach(bar => bar.addEventListener("click", () => toggleRow(bar)));
+    const bars = $$(".work__bar", list);
+    bars.forEach(bar => bar.addEventListener("click", () => toggleRow(bar)));
+
+    if (wasOpen.length) {
+      const rows = $$(".work", list);
+      wasOpen.forEach(i => {
+        const el = rows[i];
+        if (!el) return;
+        el.classList.add("is-open");
+        el.querySelector(".work__panel").style.maxHeight = "none";   // no replay
+        const bar = el.querySelector(".work__bar");
+        bar.setAttribute("aria-expanded", "true");
+        bar.setAttribute("data-hint-text", T("hintRowOpen"));
+      });
+    }
   }
 
   /* Reveal-on-scroll for everything below the scripts.
@@ -554,14 +618,26 @@
     const panel = work.querySelector(".work__panel");
     const open  = !work.classList.contains("is-open");
 
+    // Drop any handler left from a previous toggle. Without this, opening and
+    // closing quickly lets the *close* transition run the open-handler, which
+    // sets max-height:none and leaves the panel wide open while the row says
+    // it is shut.
+    if (panel._settle) {
+      panel.removeEventListener("transitionend", panel._settle);
+      panel._settle = null;
+    }
+
     if (open) {
       work.classList.add("is-open");
       panel.style.maxHeight = panel.scrollHeight + "px";
-      panel.addEventListener("transitionend", function done(e) {
+      panel._settle = (e) => {
         if (e.propertyName !== "max-height") return;
-        panel.style.maxHeight = "none";           // let it grow if the window resizes
-        panel.removeEventListener("transitionend", done);
-      });
+        panel.removeEventListener("transitionend", panel._settle);
+        panel._settle = null;
+        // Only release the cap if the row is *still* open.
+        if (work.classList.contains("is-open")) panel.style.maxHeight = "none";
+      };
+      panel.addEventListener("transitionend", panel._settle);
     } else {
       panel.style.maxHeight = panel.scrollHeight + "px";
       requestAnimationFrame(() => {
@@ -599,47 +675,50 @@
       requestAnimationFrame(() => scrollTo(target));
     };
 
-    btn.addEventListener("click", () => open(works));
+    // Pressing the yin-yang is the only way in. If the visitor was aiming at
+    // a particular section when they were turned back, remember it and take
+    // them there once they press.
+    let pending = null;
 
-    // Every menu item works from the front door, not just "Work".
+    btn.addEventListener("click", () => {
+      const target = pending || works;
+      pending = null;
+      open(target);
+    });
+
+    /* A dead click teaches nothing, so a menu item pressed before entry
+       throws the eye at the button and remembers where they wanted to go. */
+    const nudge = () => {
+      btn.classList.remove("is-nudged");
+      void btn.offsetWidth;               // restart the animation
+      btn.classList.add("is-nudged");
+      btn.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+      setTimeout(() => btn.classList.remove("is-nudged"), 800);
+    };
+
     $$(".nav__links a[href^='#']").forEach(link => {
       const id = link.getAttribute("href").slice(1);
       const section = document.getElementById(id);
       if (!section) return;                     // e.g. the email button
       link.addEventListener("click", (e) => {
         e.preventDefault();
-        open(section);
+        if (isOpen()) { scrollTo(section); return; }
+        pending = section;                      // honoured on the first press
+        nudge();
       });
     });
+  }
 
-    // Scrolling is the other thing people try when a page looks like a
-    // dead end. Treat it as "let me in" rather than ignoring it.
-    const onWheel = (e) => {
-      if (isOpen() || e.deltaY <= 0) return;               // ignore scroll-up
-      open(works);
-    };
+  /* The hero's animations loop forever. Pause them the moment the hero is off
+     screen — a compositor busy with invisible work is the difference between
+     a smooth scroll and a stuttering one. */
+  function watchHero() {
+    const hero = $(".hero");
+    if (!hero || !("IntersectionObserver" in window)) return;
 
-    const SCROLL_KEYS = ["ArrowDown", "PageDown", "End", " "];
-    const onKey = (e) => {
-      if (isOpen()) return;
-      if (!SCROLL_KEYS.includes(e.key)) return;
-      // Enter and Space belong to whatever is focused. Only treat a key as
-      // "let me in" when nothing interactive has focus — otherwise pressing
-      // Enter on a menu link would scroll to Work and fight its own handler.
-      const el = document.activeElement;
-      if (el && el !== document.body && el.closest("a,button,input,textarea,select")) return;
-      open(works);
-    };
-
-    addEventListener("wheel", onWheel, { passive: true });
-    addEventListener("keydown", onKey);
-
-    let touchY = null;
-    addEventListener("touchstart", (e) => { touchY = e.touches[0].clientY; }, { passive: true });
-    addEventListener("touchmove", (e) => {
-      if (isOpen() || touchY === null) return;
-      if (touchY - e.touches[0].clientY > 30) open(works);  // swiped up
-    }, { passive: true });
+    new IntersectionObserver(([entry]) => {
+      document.body.classList.toggle("is-away", !entry.isIntersecting);
+    }, { threshold: 0 }).observe(hero);
   }
 
   /* The nav needs a backdrop as soon as anything scrolls beneath it. */
@@ -673,6 +752,7 @@
     renderReviews();
     watchReveals();          // after render, so the generated rows are seen
     watchScroll();
+    watchHero();
     bindEnter();
     bindLang();
     bindTheme();

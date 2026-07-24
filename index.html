@@ -46,6 +46,20 @@
 
 <body class="is-loading">
 
+<!-- Every word on this page is injected by JavaScript, so without it the
+     visitor would get a blank screen and no way to reach me. -->
+<noscript>
+  <div class="noscript">
+    <h1>Dakunesu' Workplace</h1>
+    <p>This portfolio needs JavaScript to show my scripts, services and reviews.
+       Please enable it, or write to me directly:</p>
+    <p><a href="mailto:saulgodmanac@gmail.com">saulgodmanac@gmail.com</a></p>
+    <p>Video scripts from €5 · Websites from €10 · App development from €20.
+       Based in Denmark, working online.</p>
+  </div>
+</noscript>
+
+
 <header class="nav">
   <a class="nav__name" href="#top"><span class="dash">—</span> <span data-site="name">&nbsp;</span></a>
 
@@ -123,9 +137,10 @@
       </button>
     </div>
 
-    <div class="scrollcue" aria-hidden="true">
-      <span class="scrollcue__line"></span>
-      <span data-i18n="scrollCue">Scroll</span>
+    <!-- The yin-yang is the only way in, so the cue points at it. -->
+    <div class="presscue" aria-hidden="true">
+      <span class="presscue__line"></span>
+      <span data-i18n="pressMe">Press me</span>
     </div>
 
     <div class="hero__socials" data-site="socials"></div>

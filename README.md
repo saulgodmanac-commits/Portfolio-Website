@@ -36,7 +36,8 @@ the language blocks, because they are the writing samples themselves — a clien
 hiring an English scriptwriter wants to read your English. The labels around
 them (`Hook`, `Full script`) do translate.
 
-Prices stay as `€5` / `€10` in both languages. Dates under reviews follow the
+Prices stay in euros in both languages — only the wording around them changes
+(`From €5` / `Від €5`). Dates under reviews follow the
 chosen language, not the visitor's browser.
 
 To add a third language, copy a whole block in `TEXT`, translate it, and add a
@@ -114,6 +115,22 @@ Each `{ ... }` block is one row. To add another, copy a block, paste it,
 change the text. Order matters: the first entry is the first one shown, and
 the number beside "Work" in the menu counts them automatically.
 
+Prices show in the collapsed service row, so nobody has to click to find
+out what something costs. A service can also carry a `tiers` list, rendered
+as a small price table in its panel:
+
+```js
+tiers: [
+  { label: "Up to 10 min", price: "€5" },
+  { label: "10–20 min",    price: "€10" },
+  { label: "20 min +",     price: "€20" }
+]
+```
+
+When you use tiers, set the row `price` to "From €5" so the collapsed row is
+honest about it being a starting figure. Keep the ranges contiguous — a gap
+like "5–10" then "15–20" leaves 11–14 minutes unpriced.
+
 For a script, only `title` and `description` are required.
 For a service, only `title` and `summary`.
 Every other field can be deleted and that part simply won't render.
@@ -171,12 +188,16 @@ assets/
 
 ## Notes
 
-- The first screen is a door: name, role and the yin-yang. The sections
-  below stay hidden until the visitor comes in — but the **menu is always
-  visible**, a **Scroll** cue sits under the button, and **scrolling, swiping
-  up, or pressing any menu item** opens the site just as the button does.
-  An earlier version hid the menu too, and a client reported being unable to
-  navigate; that is what these three extra ways in are for.
+- The first screen is a door: name, role and the yin-yang. **Pressing the
+  yin-yang is the only way in** — scrolling, swiping and the keyboard do not
+  open the site. A "Press me" cue sits under the button.
+  The menu stays visible so nobody thinks the page is broken, but a menu item
+  pressed before entry does not open the site: it makes the yin-yang jump so
+  the eye lands on it, and remembers which section was wanted so the first
+  press goes straight there.
+  Be aware of the trade-off: a client once reported the site was hard to
+  navigate, which is why the menu is visible and the cue exists at all. If
+  that feedback returns, the ways in are all in `bindEnter()` in `main.js`.
 - Section order is Work, Reviews, Services, About. Reviews sit high on
   purpose: social proof lands before the price list.
 - The palette lives in the CSS variables at the top of `style.css`. It is a
@@ -190,6 +211,38 @@ assets/
 - `data-theme` is set by a small inline script in `<head>`, before the first
   paint. It has to stay inline and stay there — an external file arrives too
   late, and a dark-mode visitor gets a white flash.
+- The whole page is built by JavaScript, so there is a `<noscript>` block with
+  the email address and prices. If you change your address or rates, change it
+  there too — nothing else updates it.
+- Only Cormorant **300 and 400** are downloaded. Asking for 500 anywhere makes
+  the browser fake a bold and it looks smeared; if you want a heavier serif,
+  add the weight to the Google Fonts URL first.
+- An open accordion panel is measured, then released to `max-height:none` when
+  its transition ends. That handler is stored on the element and cleared on
+  every toggle — without that, opening and closing quickly leaves a "closed"
+  row fully expanded.
+
+## Performance
+
+The page scrolled badly once. Measuring — not guessing — found the cause: the
+yin-yang's endless spin and the cue's travelling light kept running while the
+hero was scrolled far out of view, so the compositor did invisible work on
+every frame. The `is-away` class (set by an IntersectionObserver on the hero)
+pauses them. **If you add another looping animation, pause it the same way.**
+
+Two things that look like obvious culprits are not: removing
+`background-attachment: fixed` made scrolling *worse* in testing, and the
+nav's `backdrop-filter` blur barely registered. Measure before "optimising"
+either of them.
+
+A language switch does **not** rebuild the script rows. Their text is the same
+in both languages, so only the labels around them swap, via `data-i18n` and
+`data-subj-key`. Rebuilding them blocked the main thread for ~60ms on a slow
+phone. If you add a translatable label inside a script row, give it a
+`data-i18n` attribute — it will not be re-rendered into place.
+
+Measured on a 6x-throttled CPU, all scripts expanded, ~18,000px page:
+60fps scrolling on desktop and mobile, and every interaction under 30ms.
 - The headline is sized against screen height as well as width, so the
   yin-yang button stays above the fold on short laptop screens. If you make
   the name much longer, check it still fits.
