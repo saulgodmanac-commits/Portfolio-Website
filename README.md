@@ -36,12 +36,42 @@ the language blocks, because they are the writing samples themselves — a clien
 hiring an English scriptwriter wants to read your English. The labels around
 them (`Hook`, `Full script`) do translate.
 
-Prices stay in euros in both languages — only the wording around them changes
-(`From €5` / `Від €5`). Dates under reviews follow the
-chosen language, not the visitor's browser.
+Prices are written once, as euros, and are the same figure in both languages —
+only the wording around them changes (`From €5` / `Від €5`). Dates under
+reviews follow the chosen language, not the visitor's browser.
 
 To add a third language, copy a whole block in `TEXT`, translate it, and add a
 button to the switch in `index.html` with the matching `data-lang` code.
+
+## Euros and dollars
+
+The switch beside the language buttons shows every price in euros or in US
+dollars. **Euros are the default and stay the default** — they are what you
+invoice, and a dollar figure is only ever a conversion. A visitor's choice is
+remembered for their next visit.
+
+Two settings in `SITE`, at the top of `content.js`:
+
+```js
+liveRate: true,     // look up today's rate when someone asks for dollars
+usdPerEur: 1.15,    // used until that arrives, and if it can't be reached
+```
+
+With `liveRate` on, the rate comes from the European Central Bank's daily
+figures (`api.frankfurter.dev`), fetched **once, and only at the moment a
+visitor actually presses `$`**. Anyone who stays in euros never causes that
+request. Dollars appear instantly at the fixed rate above and correct
+themselves a moment later if the live one differs.
+
+Set `liveRate: false` to never go to the network, and keep `usdPerEur` roughly
+current by hand.
+
+Dollar figures are **rounded to whole dollars** — the rate moves daily, so
+showing cents would claim a precision this doesn't have. While dollars are on
+screen a line under *Services* says so, and says that the invoice is in euros.
+That sentence is `usdNote` in both `ui` blocks. Don't delete it: a converted
+number sitting next to a service with no explanation reads as a quote, and in
+the EU an unclear price is a real problem, not a stylistic one.
 
 ## Reviews
 
@@ -82,6 +112,83 @@ The checks in that SQL are the real protection: they run on Supabase's server,
 where a visitor cannot reach them. The length limits and the rating range are
 enforced there, not just in the browser.
 
+### Keeping spam out
+
+There are two layers, and only one of them matters.
+
+**In the browser** (already working, nothing to do): a hidden honeypot field,
+a three-second trap so nothing automated can submit the instant the page
+loads, a 12-hour cooldown per browser (`reviewCooldownHours` in `SITE`), and
+checks that reject web addresses and single-character gibberish.
+
+**On Supabase** (you must run this): the browser checks stop the ordinary
+nuisance and tell an honest person what's wrong, but anyone willing to post
+straight to the API skips every one of them. These rules cannot be skipped,
+because they run on Supabase's server. Open **SQL Editor** and run:
+
+```sql
+-- No web addresses, in the review or the name. Spam sells something,
+-- and selling needs a link. Bare domains are caught too, which is how
+-- most of them slip past a naive http:// check.
+alter table public.reviews drop constraint if exists reviews_no_links;
+alter table public.reviews add constraint reviews_no_links check (
+  comment !~* '(https?://|www\.|\y[a-z0-9-]+\.(com|net|org|ru|xyz|top|shop|info|biz|click|link|site|online)\y)'
+  and name !~* '(https?://|www\.)'
+);
+
+-- A rate limit and a duplicate guard.
+create or replace function public.reviews_guard()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  recent int;
+begin
+  -- Five in ten minutes, site-wide. A real client posts one.
+  select count(*) into recent
+  from public.reviews
+  where created_at > now() - interval '10 minutes';
+
+  if recent >= 5 then
+    raise exception 'Too many reviews just now, please try later'
+      using errcode = 'check_violation';
+  end if;
+
+  -- The same words twice inside a day is a double-tap or a bot.
+  if exists (
+    select 1 from public.reviews
+    where comment = new.comment
+      and created_at > now() - interval '24 hours'
+  ) then
+    raise exception 'That review has already been posted'
+      using errcode = 'unique_violation';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists reviews_guard on public.reviews;
+create trigger reviews_guard
+  before insert on public.reviews
+  for each row execute function public.reviews_guard();
+```
+
+`security definer` is load-bearing: without it the count runs as the anonymous
+visitor and row-level security could hide the very rows it needs to count.
+
+To loosen or tighten it, change the two intervals. If you ever get a burst of
+legitimate reviews at once — say you ask a group of clients on the same day —
+raise the `5` temporarily, or they will be turned away.
+
+**What this does not stop.** A person determined to write one convincing fake
+review by hand will get through, because nothing here can tell a real client
+from a patient liar. If something rubbish lands, delete the row in
+**Table Editor → reviews**. If it becomes a habit, the fix is approval before
+publishing — see the note at the end of the next section.
+
 ### Things to know before you switch it on
 
 - **The `anon` key is public.** It sits in the page source for anyone to read.
@@ -95,6 +202,58 @@ enforced there, not just in the browser.
 - If you later want reviews to wait for your approval, add an
   `approved boolean default false` column, change the read policy to
   `using (approved)`, and tell me — the front-end needs a one-line change.
+
+### Translating a review
+
+Clients write in whatever language they think in, and yours already arrive in
+Ukrainian and English. Every review carries a small **Translate** button that
+rewrites it into whichever language the site is currently set to; pressing it
+again puts the client's own words back.
+
+**Machine translation gets things wrong, and you should assume it will.** On
+your own first review it turned "Не боїться підправити роботи свої" — *he
+isn't afraid to correct his own work*, praise about you — into "Do not be
+afraid to correct your work", an instruction aimed at the reader. Ukrainian
+drops the subject where English needs one, and the engine guessed wrong.
+
+So you can write the translation yourself, and it wins over the machine every
+time. Add two optional columns:
+
+```sql
+alter table public.reviews add column if not exists comment_en text;
+alter table public.reviews add column if not exists comment_uk text;
+```
+
+Then in **Table Editor → reviews**, fill in `comment_en` for a Ukrainian
+review (or `comment_uk` for an English one). Where you have, the site uses
+your words, makes no request to anyone, and labels it *Translated* rather than
+*Machine translation*. Where you haven't, it falls back to the machine exactly
+as before. The columns are optional — the site works without them.
+
+**This is worth doing for the reviews you already have.** They are testimonials
+about your work, they are the two an English visitor will read first, and one
+of them currently says something you did not do.
+
+Worth knowing before you rely on it:
+
+- **Nothing is sent anywhere until a visitor presses the button.** The page
+  makes no translation request on load. What gets sent is the review text —
+  already published on this page for anyone to read.
+- It goes to Google's public translation endpoint, and falls back to MyMemory
+  if that fails. Both are free and unofficial, so both can go down. If they
+  both fail the review is left exactly as written and the button says so.
+  Nothing to fix if that happens; it usually comes back on its own.
+- A translated quote is shown in italics and labelled **Machine translation**.
+  Leave that label alone. Passing a machine's wording off as a client's own
+  words is the kind of small dishonesty that costs you a client who notices.
+- If the text is already in the language being read, it says so rather than
+  repainting the same sentence.
+- Translations are cached for the visit, so toggling back and forth is free.
+
+The wording is in `ui` (`translate`, `showOriginal`, `translatedNote`,
+`errTranslate`, `sameLanguage`). The providers are `viaGoogle` and
+`viaMyMemory` in `main.js` — they are tried in order, so to add or replace one,
+put it in that array.
 
 ### Hand-written reviews
 
@@ -120,16 +279,22 @@ out what something costs. A service can also carry a `tiers` list, rendered
 as a small price table in its panel:
 
 ```js
+price: 5, priceFrom: true,
 tiers: [
-  { label: "Up to 10 min", price: "€5" },
-  { label: "10–20 min",    price: "€10" },
-  { label: "20 min +",     price: "€20" }
+  { label: "Up to 10 min", price: 5 },
+  { label: "10–20 min",    price: 10 },
+  { label: "20 min +",     price: 20 }
 ]
 ```
 
-When you use tiers, set the row `price` to "From €5" so the collapsed row is
-honest about it being a starting figure. Keep the ranges contiguous — a gap
-like "5–10" then "15–20" leaves 11–14 minutes unpriced.
+**Write prices as plain numbers of euros — `5`, not `"€5"`.** The site adds
+the symbol itself, and it can only convert a price to dollars if it is given a
+number to work on. A price written as text still renders, but it will be stuck
+in euros whichever currency the visitor picks.
+
+When you use tiers, add `priceFrom: true` so the collapsed row reads "From €5"
+and is honest about it being a starting figure. Keep the ranges contiguous — a
+gap like "5–10" then "15–20" leaves 11–14 minutes unpriced.
 
 For a script, only `title` and `description` are required.
 For a service, only `title` and `summary`.
@@ -289,6 +454,11 @@ Anything else that needs to overflow a row will hit the same wall.
 
 ## The favicon
 
-Lives in `assets/icons/`. To change it, replace those files keeping the same
-names. `favicon-512.png` doubles as the image shown when the link is pasted
-into a chat, so keep it square and legible when small.
+The `D` lettermark, in `assets/icons/`. To change it, replace those files
+keeping the same names. `favicon-512.png` doubles as the image shown when the
+link is pasted into a chat, so keep it square and legible when small.
+
+Every icon link in `index.html` ends in `?v=2`. **Bump that number whenever you
+replace the icons.** Browsers cache a favicon far longer than they cache a
+page, and without a changed URL a returning visitor keeps seeing the old one
+for weeks — which is exactly what makes people think the swap didn't work.

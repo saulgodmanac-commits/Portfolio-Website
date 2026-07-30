@@ -63,7 +63,7 @@ body,.nav,.btn-ghost,.review,.rform,.work,.script__body{
 .work__num,.work__tags,.work__facts span,.work__label,.script__h,
 .rsum__outof,.rsum__meta span,.review__role,.review__stars,.rsum__stars,
 .rform__title,.rform__stars legend,.rform__field > span,.rform__count,
-.services__note,.nav__links,.lang__btn,.foot small,
+.services__note,.nav__links,.lang__btn,.cur__btn,.foot small,
 .btn-ghost,.reviews__status,.rform__msg{
   font-weight:500;
 }
@@ -189,18 +189,25 @@ ol{list-style:none;padding:0}
   gap:clamp(6px,.8vw,10px);font-size:.8rem;
 }
 
-/* The switch sits outside .nav__links on purpose: the links are hidden
+/* The switches sit outside .nav__links on purpose: the links are hidden
    until the yin-yang is pressed, but language must be changeable first. */
-.lang{display:flex;align-items:center;gap:6px}
-.lang__btn{
+.lang,.cur{display:flex;align-items:center;gap:6px}
+.lang__btn,.cur__btn{
   background:none;border:0;padding:2px 1px;cursor:pointer;
   font:inherit;font-size:.72rem;letter-spacing:.14em;
   color:var(--grey-dim);transition:color .3s;
 }
-.lang__btn:hover{color:var(--grey)}
-.lang__btn[aria-pressed="true"]{color:var(--fg)}
-.lang__btn:focus-visible{outline:1px solid var(--fg);outline-offset:3px;border-radius:2px}
+.lang__btn:hover,.cur__btn:hover{color:var(--grey)}
+.lang__btn[aria-pressed="true"],.cur__btn[aria-pressed="true"]{color:var(--fg)}
+.lang__btn:focus-visible,.cur__btn:focus-visible{
+  outline:1px solid var(--fg);outline-offset:3px;border-radius:2px;
+}
 .lang__sep{color:var(--line);font-size:.72rem}
+
+/* € and $ are single glyphs, so the tracking that spaces out "EN" just pushes
+   them off centre. A little more size instead, to match the weight of the
+   two-letter labels beside them. */
+.cur__btn{letter-spacing:0;font-size:.86rem;min-width:1ch;text-align:center}
 
 /* ---------- light / dark toggle ---------- */
 .theme{
@@ -488,6 +495,9 @@ body:not(.works-open) .foot{display:none}
   font-size:.8rem;letter-spacing:.02em;color:var(--grey);
 }
 .services__note::before{content:"— ";color:var(--grey-dim)}
+/* The conversion caveat, only on screen while prices are in dollars. Quieter
+   than the line it follows: it is a footnote, not a second offer. */
+.services__rate{color:var(--grey-dim)}
 
 .works__head{display:flex;align-items:center;gap:24px;margin-bottom:clamp(28px,5vh,56px)}
 .works__head h2,.about h2{
@@ -674,6 +684,37 @@ body:not(.works-open) .foot{display:none}
   margin:0;font-family:"Cormorant Garamond",serif;
   font-size:clamp(1.1rem,1.5vw,1.4rem);line-height:1.5;color:var(--fg);
 }
+/* ---------- translating a review ----------
+   Understated on purpose. The review is what a visitor came to read; this is
+   a tool sitting beside it, not part of what the client said. */
+.review__tools{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.review__tr{
+  background:none;border:0;padding:0 0 2px;cursor:pointer;
+  font:inherit;font-size:.68rem;font-weight:500;
+  letter-spacing:.14em;text-transform:uppercase;
+  color:var(--grey-dim);border-bottom:1px solid var(--line);
+  transition:color .3s,border-color .3s;
+}
+.review__tr:hover{color:var(--fg);border-color:var(--fg)}
+.review__tr:disabled{cursor:default;opacity:.55}
+.review__tr:focus-visible{outline:1px solid var(--fg);outline-offset:3px;border-radius:2px}
+/* This hint is a sentence, and the shared tooltip is centred and nowrap — on
+   the leftmost card that put its start 35px off the side of the screen. Anchor
+   it to the button's left edge and let it wrap instead. */
+.review__tr[data-hint-text]::after{
+  left:0;transform:translate(0,4px);
+  white-space:normal;width:max-content;max-width:min(240px,66vw);
+}
+.review__tr[data-hint-text]:hover::after,
+.review__tr[data-hint-text]:focus-visible::after{transform:translate(0,0)}
+.review__trnote{
+  font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--grey-dim);
+}
+.review__trnote[hidden]{display:none}
+/* Machine words should not look like the client's own. */
+.review.is-translated .review__quote{font-style:italic}
+
 .review__by{display:flex;flex-direction:column;gap:4px;margin-top:auto}
 .review__name{font-size:.85rem;color:var(--fg)}
 .review__role{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--grey-dim)}

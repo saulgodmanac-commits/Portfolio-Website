@@ -74,9 +74,7 @@
     $("#year").textContent = new Date().getFullYear();
     $("#workCount").textContent = String(WORKS.length).padStart(2, "0");
 
-    const note = $("#servicesNote");
-    note.textContent = L.servicesNote || "";
-    note.hidden = !L.servicesNote;
+    paintServicesNote();
 
     // The yin-yang label depends on whether the site has been opened.
     const opened = document.body.classList.contains("works-open");
@@ -115,6 +113,111 @@
       btn.setAttribute("aria-pressed", String(btn.dataset.lang === lang));
       btn.addEventListener("click", () => applyLanguage(btn.dataset.lang));
     });
+  }
+
+  /* ================= currency =================
+     Content holds a number of euros and nothing else. Euros are what gets
+     invoiced; dollars are a courtesy for a visitor who doesn't think in them,
+     and are always shown as what they are — a rounded conversion. */
+
+  const CUR_KEY = "currency";
+  const RATE_URL = "https://api.frankfurter.dev/v1/latest?base=EUR&symbols=USD";
+
+  function startingCurrency() {
+    let saved = null;
+    try { saved = localStorage.getItem(CUR_KEY); } catch { /* private mode */ }
+    return saved === "usd" ? "usd" : "eur";     // euros unless asked otherwise
+  }
+
+  let currency = startingCurrency();
+  let usdRate = Number(SITE.usdPerEur) > 0 ? Number(SITE.usdPerEur) : 1.15;
+  let ratePromise = null;
+
+  /* One price, in whatever is on screen. Rounded to whole units on purpose:
+     the rate moves every day, so cents would claim a precision this doesn't
+     have. Anything that isn't a number is passed straight through, so a price
+     hand-written as "Ask me" still renders. */
+  function money(eur) {
+    const n = Number(eur);
+    if (eur === "" || eur === null || !isFinite(n)) return String(eur);
+    return currency === "usd" ? `$${Math.round(n * usdRate)}` : `€${n}`;
+  }
+
+  /* Today's rate from the European Central Bank's daily reference set, asked
+     for once and only at the moment someone actually wants dollars — a visitor
+     who stays in euros never causes this request at all. */
+  function fetchRate() {
+    if (ratePromise) return ratePromise;
+
+    ratePromise = fetch(RATE_URL)
+      .then(res => res.ok ? res.json() : Promise.reject(new Error(String(res.status))))
+      .then(data => {
+        const rate = Number(data && data.rates && data.rates.USD);
+        if (!(rate > 0)) return false;
+        usdRate = rate;
+        return true;
+      })
+      .catch(err => {
+        // Not worth a message on screen: the fixed rate in content.js is
+        // already showing a sensible number.
+        console.warn("[currency] live rate unavailable, using the fixed one:", err);
+        return false;
+      });
+
+    return ratePromise;
+  }
+
+  /* "€5" on its own, or "From €5" where the figure is where a service starts
+     rather than what it costs. */
+  function priceLabel(eur, isFrom) {
+    const amount = money(eur);
+    const wrap = T("fromPrice");
+    return isFrom && typeof wrap === "function" ? wrap(amount) : amount;
+  }
+
+  /* Prices are patched in place rather than by re-rendering the list — a
+     rebuild would restart the reveal animations under the visitor's cursor. */
+  function paintPrices() {
+    $$("[data-eur]").forEach(el => {
+      el.textContent = priceLabel(el.dataset.eur, el.hasAttribute("data-price-from"));
+    });
+    paintServicesNote();
+  }
+
+  /* The services line, plus the conversion caveat while dollars are showing. */
+  function paintServicesNote() {
+    const note = $("#servicesNote");
+    if (!note) return;
+
+    const base = L.servicesNote || "";
+    const caveat = currency === "usd" ? (T("usdNote") || "") : "";
+
+    note.innerHTML = esc(base) +
+      (caveat ? `${base ? " " : ""}<span class="services__rate">${esc(caveat)}</span>` : "");
+    note.hidden = !(base || caveat);
+  }
+
+  function applyCurrency(code, remember = true) {
+    if (code !== "eur" && code !== "usd") return;
+    currency = code;
+    if (remember) { try { localStorage.setItem(CUR_KEY, currency); } catch {} }
+
+    $$(".cur__btn").forEach(b =>
+      b.setAttribute("aria-pressed", String(b.dataset.cur === currency)));
+
+    paintPrices();
+
+    // Dollars appear immediately at the fixed rate, then correct themselves
+    // if the live one arrives — better than a blank column while we wait.
+    if (currency === "usd" && SITE.liveRate !== false) {
+      fetchRate().then(fresh => { if (fresh && currency === "usd") paintPrices(); });
+    }
+  }
+
+  function bindCurrency() {
+    applyCurrency(currency, false);      // don't store a choice nobody made yet
+    $$(".cur__btn").forEach(btn =>
+      btn.addEventListener("click", () => applyCurrency(btn.dataset.cur)));
   }
 
   /* ================= light / dark =================
@@ -202,9 +305,13 @@
       { year: "numeric", month: "short", day: "numeric" });
   };
 
+  /* select=* rather than a named list on purpose: it picks up the optional
+     comment_en / comment_uk columns if you have added them, and still works
+     if you haven't. Naming them explicitly would 400 the whole request on a
+     table that doesn't have them yet, taking the reviews down with it. */
   async function fetchReviews() {
     const url = `${SUPABASE.url}/rest/v1/${TABLE}` +
-                `?select=name,rating,comment,created_at&order=created_at.desc&limit=100`;
+                `?select=*&order=created_at.desc&limit=100`;
     const res = await fetch(url, { headers: sbHeaders() });
     if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
     return res.json();
@@ -248,8 +355,168 @@
     navScore.textContent = avg.toFixed(1);
   }
 
+  /* ---------- translating a review ----------
+     Reviews are written in whatever language the client happens to use, so a
+     visitor can meet a card they simply cannot read. Each one carries a button
+     that fetches a translation into the language the site is currently set to.
+
+     Two providers, tried in order, because both are free services that go down
+     from time to time. Nothing leaves the browser until a visitor presses the
+     button, and what is sent is text already published on this page. The
+     result is always labelled as a machine's work, never passed off as the
+     client's own words. */
+
+  const trCache = new Map();          // `${target}\n${source}` -> result
+  const hasCyrillic = (str) => /[Ѐ-ӿ]/.test(str);
+
+  async function viaGoogle(text, target) {
+    const url = "https://translate.googleapis.com/translate_a/single" +
+                `?client=gtx&sl=auto&tl=${encodeURIComponent(target)}` +
+                `&dt=t&q=${encodeURIComponent(text)}`;
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`google ${res.status}`);
+
+    // [[["translated","original",…],…], null, "detected-language", …]
+    const data = await res.json();
+    const chunks = Array.isArray(data && data[0]) ? data[0] : [];
+    const out = chunks.map(c => (c && c[0]) || "").join("").trim();
+    if (!out) throw new Error("google: empty response");
+
+    return { text: out, from: typeof data[2] === "string" ? data[2] : "" };
+  }
+
+  async function viaMyMemory(text, target) {
+    // This one has no auto-detect and must be told the source language.
+    // Reading it off the alphabet covers the case that actually turns up
+    // here — Ukrainian and English sitting in the same list of reviews.
+    const from = hasCyrillic(text) ? "uk" : "en";
+    if (from === target) return { text, from };
+
+    const url = "https://api.mymemory.translated.net/get" +
+                `?q=${encodeURIComponent(text)}&langpair=${from}|${target}`;
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`mymemory ${res.status}`);
+
+    const data = await res.json();
+    // It answers 200 with the failure written into the body, so the status
+    // inside the JSON is the one that counts.
+    if (Number(data && data.responseStatus) !== 200) {
+      throw new Error(`mymemory: ${(data && data.responseDetails) || "refused"}`);
+    }
+    const out = String((data.responseData && data.responseData.translatedText) || "").trim();
+    if (!out) throw new Error("mymemory: empty response");
+
+    return { text: out, from };
+  }
+
+  async function translateText(text, target) {
+    const key = `${target}\n${text}`;
+    if (trCache.has(key)) return trCache.get(key);
+
+    let lastErr = null;
+    for (const provider of [viaGoogle, viaMyMemory]) {
+      try {
+        const result = await provider(text, target);
+        trCache.set(key, result);
+        return result;
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+    throw lastErr || new Error("no translation provider answered");
+  }
+
+  /* Which reviews are currently on screen, so a button can find its own
+     original text by index without stuffing a copy into the markup. */
+  let paintedReviews = [];
+  let reviewToolsBound = false;
+
+  async function toggleTranslation(btn) {
+    const card  = btn.closest(".review");
+    const quote = $(".review__quote", card);
+    const note  = $(".review__trnote", card);
+
+    const source = paintedReviews[Number(btn.dataset.i)] || {};
+    const original = source.comment || source.quote || "";
+    const target = supported(lang) ? lang : "en";
+
+    // A second press gives the client their own words back.
+    if (card.classList.contains("is-translated")) {
+      card.classList.remove("is-translated");
+      quote.textContent = original;
+      quote.removeAttribute("lang");
+      note.hidden = true;
+      btn.textContent = T("translate");
+      return;
+    }
+
+    /* A translation you wrote yourself always wins. Machine translation is
+       good enough to get the gist across and no better — on one of these very
+       reviews it turned "he isn't afraid to correct his own work" into an
+       instruction aimed at the reader. Put the right words in `comment_en` /
+       `comment_uk` on Supabase and they are used instead, with no request to
+       anyone and no "machine translation" caveat. */
+    const stored = String(source[`comment_${target}`] || "").trim();
+    if (stored) {
+      quote.textContent = stored;
+      quote.setAttribute("lang", target);
+      card.classList.add("is-translated");
+      note.hidden = false;
+      note.textContent = T("translatedHuman");
+      btn.textContent = T("showOriginal");
+      return;
+    }
+
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.textContent = T("translating");
+    note.hidden = true;
+
+    try {
+      const result = await translateText(original, target);
+
+      // Nothing gained by repainting the same sentence — say so instead.
+      if (result.from === target || result.text.trim() === original.trim()) {
+        note.hidden = false;
+        note.textContent = T("sameLanguage");
+        btn.textContent = T("translate");
+        return;
+      }
+
+      quote.textContent = result.text;
+      quote.setAttribute("lang", target);
+      card.classList.add("is-translated");
+      note.hidden = false;
+      note.textContent = T("translatedNote");
+      btn.textContent = T("showOriginal");
+    } catch (err) {
+      note.hidden = false;
+      note.textContent = T("errTranslate");
+      btn.textContent = T("translate");
+      console.error("[reviews] translation failed:", err);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  /* Delegated, and bound exactly once: paintReviews replaces this list's
+     contents on every language switch and after every post. */
+  function bindReviewTools() {
+    if (reviewToolsBound) return;
+    reviewToolsBound = true;
+
+    $("#reviewsList").addEventListener("click", (e) => {
+      const btn = e.target.closest(".review__tr");
+      if (btn) toggleTranslation(btn);
+    });
+  }
+
   function paintReviews(reviews) {
     const list = $("#reviewsList");
+    paintedReviews = reviews;
+
     list.innerHTML = reviews.map((r, i) => {
       const body = r.comment || r.quote || "";
       const when = r.created_at ? fmtDate(r.created_at) : (r.role || "");
@@ -257,12 +524,20 @@
         <figure class="review" style="--i:${i}">
           ${r.rating ? `<div class="review__stars" aria-label="${esc(r.rating)} / 5">${starRow(r.rating)}</div>` : ""}
           <blockquote class="review__quote">${esc(body)}</blockquote>
+          ${body ? `<div class="review__tools">
+            <button type="button" class="review__tr" data-i="${i}"
+                    data-hint="hintTranslate" data-hint-text="${esc(T("hintTranslate"))}"
+            >${esc(T("translate"))}</button>
+            <span class="review__trnote" hidden></span>
+          </div>` : ""}
           <figcaption class="review__by">
             <span class="review__name">${esc(r.name)}</span>
             ${when ? `<span class="review__role">${esc(when)}</span>` : ""}
           </figcaption>
         </figure>`;
     }).join("");
+
+    bindReviewTools();
   }
 
   function status(msg, kind) {
@@ -270,6 +545,39 @@
     el.hidden = !msg;
     el.textContent = msg || "";
     el.className = "reviews__status" + (kind ? ` is-${kind}` : "");
+  }
+
+  /* ================= keeping the rubbish out =================
+     Four cheap checks in the browser, none of which are the real defence.
+     Anything here can be skipped by anyone willing to post straight to the
+     API instead of using the form, so the rules that actually hold the line
+     are the SQL ones on Supabase (they are in README.md — run them). These
+     exist to stop the ordinary nuisance before it ever reaches the database,
+     and to tell an honest person what is wrong in words they can act on. */
+
+  const POST_KEY = "reviewPostedAt";
+
+  // Bots sell things, and selling needs a link. Catches bare domains too,
+  // which is how most of them get past a naive http:// check.
+  const LINK_RE = /(https?:\/\/|www\.|\b[a-z0-9-]+\.(com|net|org|ru|xyz|top|shop|info|biz|click|link|site|online)\b)/i;
+
+  // No letters at all, or one character hammered over and over.
+  const isGibberish = (str) =>
+    !/[\p{L}]/u.test(str) || /^(.)\1+$/u.test(str.replace(/\s+/g, ""));
+
+  function lastPostedAt() {
+    try { return Number(localStorage.getItem(POST_KEY)) || 0; } catch { return 0; }
+  }
+
+  function withinCooldown() {
+    const hours = Number(SITE.reviewCooldownHours);
+    if (!(hours > 0)) return false;
+    const last = lastPostedAt();
+    return last > 0 && Date.now() - last < hours * 3600 * 1000;
+  }
+
+  function rememberPost() {
+    try { localStorage.setItem(POST_KEY, String(Date.now())); } catch { /* private mode */ }
   }
 
   /* Five buttons, arrow-key navigable, because a rating is a radio group. */
@@ -350,6 +658,10 @@
     if (!reviewsBound) {
       reviewsBound = true;
 
+      // When the form became fillable. A person needs seconds to read the
+      // labels and type; a script submits the moment the page is ready.
+      const shownAt = Date.now();
+
       textEl.addEventListener("input", () => {
         $("#rCount").textContent = String(textEl.value.length);
       });
@@ -367,9 +679,24 @@
           msg.className = "rform__msg is-error";
           if (el) el.focus();
         };
+
+        // Deliberately before the field checks: someone already past their
+        // one review shouldn't be walked through fixing a form that is not
+        // going to be accepted either way.
+        if (withinCooldown()) return fail(T("errAlready"));
+
+        // Three seconds, not thirty. Long enough that nothing automated gets
+        // through, short enough that pasting a prepared review and pressing
+        // straight away only costs one extra press.
+        if (Date.now() - shownAt < 3000) return fail(T("errTooFast"));
+
         if (!rating)            return fail(T("errRating"));
         if (name.length < 2)    return fail(T("errName"), nameEl);
         if (comment.length < 4) return fail(T("errComment"), textEl);
+
+        if (isGibberish(comment)) return fail(T("errComment"), textEl);
+        if (LINK_RE.test(comment)) return fail(T("errLinks"), textEl);
+        if (LINK_RE.test(name))    return fail(T("errLinks"), nameEl);
 
         submit.disabled = true;
         msg.className = "rform__msg";
@@ -377,6 +704,7 @@
 
         try {
           await postReview({ name, rating, comment });
+          rememberPost();
           form.reset();
           picker.reset();
           $("#rCount").textContent = "0";
@@ -488,11 +816,13 @@
     const alts    = (item.altTitles || []).map(t => `<li>${esc(t)}</li>`).join("");
 
     // Priced by tier (e.g. scripts, by video length) — rendered as a table.
+    // data-eur keeps the euro figure on the element, so switching currency is
+    // a text swap rather than a rebuild of the row.
     const tiers = (item.tiers || []).map(t => `
       <li class="tier">
         <span class="tier__label">${esc(t.label)}</span>
         <span class="tier__dots" aria-hidden="true"></span>
-        <span class="tier__price">${esc(t.price)}</span>
+        <span class="tier__price" data-eur="${esc(t.price)}">${esc(money(t.price))}</span>
       </li>`).join("");
 
     const custom = (item.links || []).map(l =>
@@ -510,6 +840,9 @@
        >${esc(T("emailAboutThis"))}</a>`;
 
     const id = `${kind}-${i}`;
+
+    // 0 is a real price ("free"), so test for absence rather than falsiness.
+    const hasPrice = item.price !== undefined && item.price !== null && item.price !== "";
 
     const right = isWork
       ? `${facts ? `<div class="work__facts">${facts}</div>` : ""}
@@ -541,7 +874,9 @@
           <span class="work__num">${String(i + 1).padStart(2, "0")}</span>
           <span class="work__title">${esc(item.title)}</span>
           <span class="work__tags">${tags}</span>
-          ${item.price ? `<span class="work__price">${esc(item.price)}</span>` : ""}
+          ${hasPrice ? `<span class="work__price" data-eur="${esc(item.price)}"${
+              item.priceFrom ? " data-price-from" : ""
+            }>${esc(priceLabel(item.price, item.priceFrom))}</span>` : ""}
           <span class="work__sign" aria-hidden="true">+</span>
         </button>
 
@@ -755,6 +1090,7 @@
     watchHero();
     bindEnter();
     bindLang();
+    bindCurrency();     // after the lists exist: it repaints their prices
     bindTheme();
 
     // One frame's grace so the first paint has the finished layout —

@@ -24,6 +24,25 @@ const SITE = {
   // Which language a first-time visitor sees. Their choice is remembered after.
   defaultLang: "en",
 
+  // Every price on the site is written as a plain number of euros, because
+  // euros are what you actually invoice. A visitor can switch the display to
+  // US dollars, and these two settings control that conversion:
+  //
+  //   liveRate  — look up today's rate from the European Central Bank, but
+  //               only at the moment somebody actually asks for dollars.
+  //               Nobody who stays in euros ever causes that request.
+  //               Set it to false to never go to the network at all.
+  //   usdPerEur — used until the live rate arrives, and if it can't be
+  //               reached. Worth nudging once a year even with liveRate on.
+  liveRate: true,
+  usdPerEur: 1.15,
+
+  // How long this browser must wait before it may leave a second review.
+  // Stops the most common nuisance — the same person posting five times —
+  // without troubling anyone leaving one honest review. The real limits are
+  // the SQL rules on Supabase; this only saves them being reached.
+  reviewCooldownHours: 12,
+
   // Add or remove freely. An empty list [] hides the row entirely.
   socials: []
 };
@@ -288,13 +307,17 @@ const TEXT = {
     services: [
       {
         title: "Scripts & Writing", category: "Writing",
-        turnaround: "2–4 days", price: "From €5",
+
+        // Prices are numbers of euros, never "€5" — the site adds the symbol,
+        // and can only convert to dollars if it is given a number to work on.
+        // `priceFrom` marks this as a starting figure rather than the cost.
+        turnaround: "2–4 days", price: 5, priceFrom: true,
 
         // Priced by finished video length. Shown as a small table in the panel.
         tiers: [
-          { label: "Up to 10 min", price: "€5" },
-          { label: "10–20 min",    price: "€10" },
-          { label: "20 min +",     price: "€20" }
+          { label: "Up to 10 min", price: 5 },
+          { label: "10–20 min",    price: 10 },
+          { label: "20 min +",     price: 20 }
         ],
 
         summary: "Video scripts written to be spoken out loud — with a hook that holds, " +
@@ -325,7 +348,7 @@ const TEXT = {
       },
       {
         title: "Websites", category: "Design & build",
-        turnaround: "3–7 days", price: "€10",
+        turnaround: "3–7 days", price: 10,
         summary: "A simple, fast page that works on a phone as well as a laptop — " +
                  "and that you can update yourself afterwards.",
         details: "Best for a portfolio, a landing page, or somewhere to point people " +
@@ -341,7 +364,7 @@ const TEXT = {
       },
       {
         title: "App Development", category: "Build",
-        turnaround: "1–2 weeks", price: "€20",
+        turnaround: "1–2 weeks", price: 20,
         summary: "A small app that does one thing well — a tool, a tracker, a calculator, " +
                  "something you keep wishing existed.",
         details: "Best for focused, single-purpose apps rather than anything with " +
@@ -377,6 +400,9 @@ const TEXT = {
       hintRowOpen: "Click to close",
       hintStar: "Click to rate",
       hintPost: "Publishes your review straight away",
+      hintCurEur: "Show prices in euros — what you'd be invoiced",
+      hintCurUsd: "Show the same prices in US dollars, roughly",
+      hintTranslate: "Switches between the original and a machine translation",
 
 
       selectedWork: "Selected work",
@@ -386,6 +412,13 @@ const TEXT = {
       hook: "Hook", otherTitles: "Other titles", fullScript: "Full script",
       details: "Details", whatYouGet: "What you get", pricing: "Pricing",
       emailAboutThis: "Email me about this",
+
+      // Wraps a price that is where a service starts, not what it costs.
+      fromPrice: (p) => `From ${p}`,
+      // Shown under Services only while dollars are on screen. Say it plainly:
+      // a converted number is not a quote, and the invoice will be in euros.
+      usdNote: "Dollar prices are converted at today's rate and rounded — " +
+               "the invoice is in euros.",
 
       servicesTitle: "Services",
       aboutTitle: "About", writeToMe: "Write to me at",
@@ -402,12 +435,28 @@ const TEXT = {
       errName: "Please add your name.",
       errComment: "Please write a few words.",
       errPost: "That didn't send. Please try again in a moment.",
+      errLinks: "Please take the web address out of your review.",
+      errAlready: "You've already left a review — thank you.",
+      errTooFast: "Take a moment over it, then press again.",
       loading: "Loading reviews…",
       loadError: "Reviews could not be loaded right now. Please try again later.",
       noReviewsPrompt: "No reviews yet. If I've worked for you, send one over and it goes up here.",
       haveReviewsPrompt: "Worked with me? Send a review and it goes up here.",
       leaveReview: "Leave a review",
       trapLabel: "Leave this empty",
+
+      // Reviews arrive in whatever language the client writes in, so each one
+      // can be translated in place. `translatedNote` is not optional politeness:
+      // a reader is owed the fact that the words they are reading are a
+      // machine's, not the client's.
+      translate: "Translate", showOriginal: "Show original",
+      translating: "Translating…",
+      translatedNote: "Machine translation",
+      // Used instead when you have written the translation yourself, which
+      // is the only way to be certain a review reads the way it should.
+      translatedHuman: "Translated",
+      errTranslate: "Couldn't translate that just now.",
+      sameLanguage: "Already in this language.",
 
       // Email subject lines
       subjEnquiry: "Enquiry", subjScript: "About your script", subjReview: "Review",
@@ -445,13 +494,13 @@ const TEXT = {
     services: [
       {
         title: "Сценарії та тексти", category: "Текст",
-        turnaround: "2–4 дні", price: "Від €5",
+        turnaround: "2–4 дні", price: 5, priceFrom: true,
 
         // Ціна залежить від тривалості готового відео.
         tiers: [
-          { label: "До 10 хв",  price: "€5" },
-          { label: "10–20 хв",  price: "€10" },
-          { label: "20 хв +",   price: "€20" }
+          { label: "До 10 хв",  price: 5 },
+          { label: "10–20 хв",  price: 10 },
+          { label: "20 хв +",   price: 20 }
         ],
 
         summary: "Сценарії для відео, написані так, щоб їх промовляли вголос — " +
@@ -479,7 +528,7 @@ const TEXT = {
       },
       {
         title: "Сайти", category: "Дизайн і розробка",
-        turnaround: "3–7 днів", price: "€10",
+        turnaround: "3–7 днів", price: 10,
         summary: "Проста і швидка сторінка, що однаково добре працює на телефоні " +
                  "й на ноутбуці — і яку ви згодом зможете оновлювати самі.",
         details: "Найкраще підходить для портфоліо, лендингу або сторінки, куди можна " +
@@ -495,7 +544,7 @@ const TEXT = {
       },
       {
         title: "Розробка застосунків", category: "Розробка",
-        turnaround: "1–2 тижні", price: "€20",
+        turnaround: "1–2 тижні", price: 20,
         summary: "Невеликий застосунок, що добре робить одну річ — інструмент, " +
                  "трекер, калькулятор, щось, чого вам постійно бракує.",
         details: "Найкраще для простих застосунків з однією метою, а не для тих, де " +
@@ -530,6 +579,9 @@ const TEXT = {
       hintRowOpen: "Натисніть, щоб закрити",
       hintStar: "Натисніть, щоб оцінити",
       hintPost: "Публікує ваш відгук одразу",
+      hintCurEur: "Показати ціни в євро — саме так виставляється рахунок",
+      hintCurUsd: "Показати ті самі ціни приблизно в доларах США",
+      hintTranslate: "Перемикає між оригіналом і машинним перекладом",
 
 
       selectedWork: "Вибрані роботи",
@@ -539,6 +591,10 @@ const TEXT = {
       hook: "Хук", otherTitles: "Інші назви", fullScript: "Повний сценарій",
       details: "Деталі", whatYouGet: "Що ви отримаєте", pricing: "Ціни",
       emailAboutThis: "Написати про це",
+
+      fromPrice: (p) => `Від ${p}`,
+      usdNote: "Ціни в доларах перераховані за сьогоднішнім курсом і округлені — " +
+               "рахунок виставляється в євро.",
 
       servicesTitle: "Послуги",
       aboutTitle: "Про мене", writeToMe: "Пишіть мені на",
@@ -555,12 +611,22 @@ const TEXT = {
       errName: "Додайте, будь ласка, своє імʼя.",
       errComment: "Напишіть, будь ласка, кілька слів.",
       errPost: "Не вдалося надіслати. Спробуйте ще раз за хвилину.",
+      errLinks: "Приберіть, будь ласка, посилання з відгуку.",
+      errAlready: "Ви вже залишили відгук — дякую.",
+      errTooFast: "Не поспішайте, а тоді натисніть ще раз.",
       loading: "Завантажуємо відгуки…",
       loadError: "Зараз не вдалося завантажити відгуки. Спробуйте пізніше.",
       noReviewsPrompt: "Відгуків поки немає. Якщо я для вас працював — надішліть відгук, і він зʼявиться тут.",
       haveReviewsPrompt: "Працювали зі мною? Надішліть відгук, і він зʼявиться тут.",
       leaveReview: "Залишити відгук",
       trapLabel: "Залиште це поле порожнім",
+
+      translate: "Перекласти", showOriginal: "Показати оригінал",
+      translating: "Перекладаємо…",
+      translatedNote: "Машинний переклад",
+      translatedHuman: "Переклад",
+      errTranslate: "Зараз не вдалося перекласти.",
+      sameLanguage: "Уже цією мовою.",
 
       subjEnquiry: "Запит", subjScript: "Про сценарій", subjReview: "Відгук",
 
