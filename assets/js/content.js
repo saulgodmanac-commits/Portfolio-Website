@@ -37,11 +37,15 @@ const SITE = {
   liveRate: true,
   usdPerEur: 1.15,
 
-  // How long this browser must wait before it may leave a second review.
-  // Stops the most common nuisance — the same person posting five times —
-  // without troubling anyone leaving one honest review. The real limits are
-  // the SQL rules on Supabase; this only saves them being reached.
-  reviewCooldownHours: 12,
+  // A review now has to come from a verified email address, and one account
+  // gets one review — so there is no per-browser cooldown to configure any
+  // more. Both rules live in the database, where they cannot be skipped.
+  // See "Who may leave a review" in README.md.
+
+  // Temporarily takes the review form off the page and says so, while the
+  // email side of that is still being set up. Existing reviews carry on
+  // showing as normal. Set to false to put the form back.
+  reviewsPaused: true,
 
   // Add or remove freely. An empty list [] hides the row entirely.
   socials: []
@@ -436,8 +440,38 @@ const TEXT = {
       errComment: "Please write a few words.",
       errPost: "That didn't send. Please try again in a moment.",
       errLinks: "Please take the web address out of your review.",
-      errAlready: "You've already left a review — thank you.",
+      errAlready: "You already have a review. Delete it first if you'd like to write another.",
       errTooFast: "Take a moment over it, then press again.",
+
+      // Shown in place of the form while SITE.reviewsPaused is on.
+      reviewsPausedNote: "Leaving a review is switched off for the moment, " +
+                         "while I finish setting up email confirmation. It " +
+                         "will be working again shortly. The reviews below " +
+                         "are unaffected.",
+
+      // Verifying an address before a review can be left.
+      signInTitle: "Verify your email to leave a review",
+      signInIntro: "Reviews come from confirmed email addresses only — it keeps " +
+                   "this page honest. Your address is never shown on the site.",
+      emailLabel: "Your email", emailPlaceholder: "you@example.com",
+      sendCode: "Send me a code", sending: "Sending…",
+      codeLabel: "The 6-digit code", codePlaceholder: "123456",
+      verify: "Verify", verifying: "Checking…",
+      changeEmail: "Use a different address",
+      codeSent: (email) => `Code sent to ${email}. Check your spam folder if it's slow.`,
+      signedInAs: (email) => `Signed in as ${email}`,
+      signOut: "Sign out",
+      errEmail: "Please enter a valid email address.",
+      errCode: "Please enter the 6-digit code from the email.",
+      errCodeWrong: "That code didn't work. Check it, or ask for a new one.",
+      errSend: "Couldn't send the code. Please try again in a moment.",
+
+      // Removing a review you left yourself.
+      deleteReview: "Delete", deleting: "Deleting…",
+      confirmDelete: "Delete your review? This cannot be undone.",
+      deletedOk: "Your review has been deleted.",
+      errDelete: "Couldn't delete that. Please try again.",
+      hintDelete: "Removes your review for good",
       loading: "Loading reviews…",
       loadError: "Reviews could not be loaded right now. Please try again later.",
       noReviewsPrompt: "No reviews yet. If I've worked for you, send one over and it goes up here.",
@@ -612,8 +646,34 @@ const TEXT = {
       errComment: "Напишіть, будь ласка, кілька слів.",
       errPost: "Не вдалося надіслати. Спробуйте ще раз за хвилину.",
       errLinks: "Приберіть, будь ласка, посилання з відгуку.",
-      errAlready: "Ви вже залишили відгук — дякую.",
+      errAlready: "У вас уже є відгук. Видаліть його, якщо хочете написати новий.",
       errTooFast: "Не поспішайте, а тоді натисніть ще раз.",
+
+      reviewsPausedNote: "Можливість залишити відгук наразі вимкнена — " +
+                         "я саме налаштовую підтвердження пошти. Скоро " +
+                         "запрацює. Відгуки нижче показуються як завжди.",
+
+      signInTitle: "Підтвердьте пошту, щоб залишити відгук",
+      signInIntro: "Відгуки приймаються лише з підтверджених адрес — так ця " +
+                   "сторінка лишається чесною. Вашу адресу на сайті не показують.",
+      emailLabel: "Ваша пошта", emailPlaceholder: "you@example.com",
+      sendCode: "Надіслати код", sending: "Надсилаємо…",
+      codeLabel: "6-значний код", codePlaceholder: "123456",
+      verify: "Підтвердити", verifying: "Перевіряємо…",
+      changeEmail: "Інша адреса",
+      codeSent: (email) => `Код надіслано на ${email}. Перевірте теку зі спамом, якщо його немає.`,
+      signedInAs: (email) => `Ви увійшли як ${email}`,
+      signOut: "Вийти",
+      errEmail: "Введіть, будь ласка, коректну адресу пошти.",
+      errCode: "Введіть 6-значний код із листа.",
+      errCodeWrong: "Код не підійшов. Перевірте його або замовте новий.",
+      errSend: "Не вдалося надіслати код. Спробуйте ще раз за хвилину.",
+
+      deleteReview: "Видалити", deleting: "Видаляємо…",
+      confirmDelete: "Видалити ваш відгук? Це не можна скасувати.",
+      deletedOk: "Ваш відгук видалено.",
+      errDelete: "Не вдалося видалити. Спробуйте ще раз.",
+      hintDelete: "Назавжди прибирає ваш відгук",
       loading: "Завантажуємо відгуки…",
       loadError: "Зараз не вдалося завантажити відгуки. Спробуйте пізніше.",
       noReviewsPrompt: "Відгуків поки немає. Якщо я для вас працював — надішліть відгук, і він зʼявиться тут.",

@@ -209,6 +209,50 @@
     <div class="reviews__grid" id="reviewsList"></div>
     <p class="reviews__status" id="reviewsStatus" hidden></p>
 
+    <!-- Stands in for the form while SITE.reviewsPaused is on. Better to say
+         plainly that it is off than to leave a form that cannot succeed. -->
+    <p class="rpaused reveal" id="reviewsPaused" hidden></p>
+
+    <!-- A review has to come from an address someone can be reached at, so
+         the form below stays out of reach until a one-time code sent to that
+         address has been typed back in. The rule is enforced by the database,
+         not by this markup — see "Who may leave a review" in README.md. -->
+    <div class="rauth reveal" id="reviewAuth" hidden>
+      <h3 class="rform__title" data-i18n="signInTitle">Verify your email to leave a review</h3>
+      <p class="rauth__intro" data-i18n="signInIntro"></p>
+
+      <form class="rauth__step" id="emailStep" novalidate>
+        <label class="rform__field">
+          <span data-i18n="emailLabel">Your email</span>
+          <input type="email" id="rEmail" autocomplete="email" required
+                 data-i18n-ph="emailPlaceholder" placeholder="you@example.com">
+        </label>
+        <button class="btn-ghost" type="submit" id="rSendCode" data-i18n="sendCode">Send me a code</button>
+      </form>
+
+      <form class="rauth__step" id="codeStep" novalidate hidden>
+        <label class="rform__field">
+          <span data-i18n="codeLabel">The 6-digit code</span>
+          <!-- one-time-code lets a phone offer the code straight from the
+               notification, instead of making them swap apps to read it. -->
+          <input type="text" id="rCode" inputmode="numeric" autocomplete="one-time-code"
+                 maxlength="6" required
+                 data-i18n-ph="codePlaceholder" placeholder="123456">
+        </label>
+        <div class="rauth__actions">
+          <button class="btn-ghost" type="submit" id="rVerify" data-i18n="verify">Verify</button>
+          <button class="rauth__link" type="button" id="rChangeEmail" data-i18n="changeEmail">Use a different address</button>
+        </div>
+      </form>
+
+      <p class="rform__msg" id="rAuthMsg" role="status"></p>
+    </div>
+
+    <p class="rauth__who" id="reviewWho" hidden>
+      <span id="rWhoText"></span>
+      <button type="button" class="rauth__link" id="rSignOut" data-i18n="signOut">Sign out</button>
+    </p>
+
     <!-- Only shown when Supabase is configured in content.js -->
     <form class="rform reveal" id="reviewForm" hidden novalidate>
       <h3 class="rform__title" data-i18n="writeReview">Write a review</h3>

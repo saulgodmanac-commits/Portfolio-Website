@@ -317,14 +317,47 @@
     return res.json();
   }
 
+  /* Signed with the visitor's own token, not the anon key — that is what lets
+     the database see who is posting and tie the row to them. */
   async function postReview(review) {
+    const token = await accessToken();
+    if (!token) throw new Error("not signed in");
+
     const res = await fetch(`${SUPABASE.url}/rest/v1/${TABLE}`, {
       method: "POST",
-      headers: { ...sbHeaders(), "Prefer": "return=representation" },
-      body: JSON.stringify(review)
+      headers: {
+        ...sbHeaders(),
+        "Authorization": `Bearer ${token}`,     // must win over the anon key above
+        "Prefer": "return=representation"
+      },
+      body: JSON.stringify({ ...review, user_id: session.id })
     });
     if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
     return (await res.json())[0];
+  }
+
+  async function deleteReview(id) {
+    const token = await accessToken();
+    if (!token) throw new Error("not signed in");
+
+    const res = await fetch(
+      `${SUPABASE.url}/rest/v1/${TABLE}?id=eq.${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: {
+          ...sbHeaders(),
+          "Authorization": `Bearer ${token}`,
+          "Prefer": "return=representation"
+        }
+      });
+    if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+
+    /* A delete the policy refused comes back 200 with an empty list, not an
+       error — it deleted nothing and says so quietly. Worth knowing: an
+       earlier attempt to remove a row with the anon key returned 204 and
+       changed nothing, which reads exactly like success. */
+    const rows = await res.json();
+    if (!rows.length) throw new Error("policy refused the delete");
+    return rows[0];
   }
 
   function paintSummary(reviews) {
@@ -508,9 +541,34 @@
     reviewToolsBound = true;
 
     $("#reviewsList").addEventListener("click", (e) => {
-      const btn = e.target.closest(".review__tr");
-      if (btn) toggleTranslation(btn);
+      const translate = e.target.closest(".review__tr");
+      if (translate) { toggleTranslation(translate); return; }
+
+      const remove = e.target.closest(".review__del");
+      if (remove) removeOwnReview(remove);
     });
+  }
+
+  async function removeOwnReview(btn) {
+    if (btn.disabled) return;
+
+    // Irreversible, so it gets an explicit yes rather than a quiet second tap.
+    if (!confirm(T("confirmDelete"))) return;
+
+    btn.disabled = true;
+    btn.textContent = T("deleting");
+
+    try {
+      await deleteReview(btn.dataset.id);
+      loadedReviews = null;              // force a real re-read, not the cache
+      await reloadReviews();
+      status(T("deletedOk"), "ok");
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = T("deleteReview");
+      status(T("errDelete"), "error");
+      console.error("[reviews] delete failed:", err);
+    }
   }
 
   function paintReviews(reviews) {
@@ -520,14 +578,22 @@
     list.innerHTML = reviews.map((r, i) => {
       const body = r.comment || r.quote || "";
       const when = r.created_at ? fmtDate(r.created_at) : (r.role || "");
+
+      // Only ever a convenience. The database refuses a delete that isn't
+      // yours whether or not this button was on the page.
+      const mine = Boolean(session && r.user_id && r.user_id === session.id && r.id);
+
       return `
         <figure class="review" style="--i:${i}">
           ${r.rating ? `<div class="review__stars" aria-label="${esc(r.rating)} / 5">${starRow(r.rating)}</div>` : ""}
           <blockquote class="review__quote">${esc(body)}</blockquote>
-          ${body ? `<div class="review__tools">
-            <button type="button" class="review__tr" data-i="${i}"
+          ${body || mine ? `<div class="review__tools">
+            ${body ? `<button type="button" class="review__tr" data-i="${i}"
                     data-hint="hintTranslate" data-hint-text="${esc(T("hintTranslate"))}"
-            >${esc(T("translate"))}</button>
+            >${esc(T("translate"))}</button>` : ""}
+            ${mine ? `<button type="button" class="review__del" data-id="${esc(r.id)}"
+                    data-hint="hintDelete" data-hint-text="${esc(T("hintDelete"))}"
+            >${esc(T("deleteReview"))}</button>` : ""}
             <span class="review__trnote" hidden></span>
           </div>` : ""}
           <figcaption class="review__by">
@@ -555,8 +621,6 @@
      exist to stop the ordinary nuisance before it ever reaches the database,
      and to tell an honest person what is wrong in words they can act on. */
 
-  const POST_KEY = "reviewPostedAt";
-
   // Bots sell things, and selling needs a link. Catches bare domains too,
   // which is how most of them get past a naive http:// check.
   const LINK_RE = /(https?:\/\/|www\.|\b[a-z0-9-]+\.(com|net|org|ru|xyz|top|shop|info|biz|click|link|site|online)\b)/i;
@@ -565,19 +629,261 @@
   const isGibberish = (str) =>
     !/[\p{L}]/u.test(str) || /^(.)\1+$/u.test(str.replace(/\s+/g, ""));
 
-  function lastPostedAt() {
-    try { return Number(localStorage.getItem(POST_KEY)) || 0; } catch { return 0; }
+  /* ================= who is leaving the review =================
+     Supabase mails a six-digit code, the visitor types it back, and the token
+     that comes out of that is what signs the insert. So "you need a working
+     email address" is a rule the database enforces on every request — this
+     file only puts a form around it. Someone posting straight to the API with
+     the anon key gets refused, which is the entire point.
+
+     There is no per-browser cooldown any more: one account gets one review,
+     and that is a unique index, not a guess about which browser you are in. */
+
+  const AUTH_KEY = "reviewSession";
+
+  let session = loadSession();      // { access_token, refresh_token, expires_at, email, id }
+
+  function loadSession() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(AUTH_KEY) || "null");
+      return (saved && saved.access_token && saved.id) ? saved : null;
+    } catch { return null; }
   }
 
-  function withinCooldown() {
-    const hours = Number(SITE.reviewCooldownHours);
-    if (!(hours > 0)) return false;
-    const last = lastPostedAt();
-    return last > 0 && Date.now() - last < hours * 3600 * 1000;
+  function saveSession(next) {
+    session = next;
+    try {
+      if (next) localStorage.setItem(AUTH_KEY, JSON.stringify(next));
+      else localStorage.removeItem(AUTH_KEY);
+    } catch { /* private mode */ }
   }
 
-  function rememberPost() {
-    try { localStorage.setItem(POST_KEY, String(Date.now())); } catch { /* private mode */ }
+  const authHeaders = () => ({
+    "apikey": SUPABASE.anonKey,
+    "Content-Type": "application/json"
+  });
+
+  async function sendCode(email) {
+    const res = await fetch(`${SUPABASE.url}/auth/v1/otp`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ email, create_user: true })
+    });
+    if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+  }
+
+  async function verifyCode(email, token) {
+    const res = await fetch(`${SUPABASE.url}/auth/v1/verify`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ email, token, type: "email" })
+    });
+    if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+
+    const data = await res.json();
+    return {
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expires_at: Number(data.expires_at) || 0,
+      email: (data.user && data.user.email) || email,
+      id: data.user && data.user.id
+    };
+  }
+
+  /* A live token, refreshed if the stored one has aged out. Returns null when
+     the session is past saving, which puts the visitor back at the code box
+     rather than failing their post with something they can't act on. */
+  async function accessToken() {
+    if (!session) return null;
+
+    const now = Math.floor(Date.now() / 1000);
+    if (session.expires_at && session.expires_at - 60 > now) return session.access_token;
+
+    try {
+      const res = await fetch(`${SUPABASE.url}/auth/v1/token?grant_type=refresh_token`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ refresh_token: session.refresh_token })
+      });
+      if (!res.ok) throw new Error(String(res.status));
+
+      const data = await res.json();
+      saveSession({
+        ...session,
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        expires_at: Number(data.expires_at) || 0
+      });
+      return session.access_token;
+    } catch (err) {
+      console.warn("[reviews] session expired, asking for a new code:", err);
+      saveSession(null);
+      paintAuthState();
+      return null;
+    }
+  }
+
+  async function signOut() {
+    const token = session && session.access_token;
+    saveSession(null);
+    paintAuthState();
+    renderReviews();               // drops the delete buttons that are no longer theirs
+
+    // Best effort: the local session is already gone either way.
+    if (!token) return;
+    try {
+      await fetch(`${SUPABASE.url}/auth/v1/logout`, {
+        method: "POST",
+        headers: { ...authHeaders(), "Authorization": `Bearer ${token}` }
+      });
+    } catch { /* nothing left to clean up here */ }
+  }
+
+  /* Signed in: the form. Signed out: the code box. Never both. */
+  function paintAuthState() {
+    const box = $("#reviewAuth");
+    const who = $("#reviewWho");
+    const form = $("#reviewForm");
+    if (!box || !who || !form) return;
+
+    // Switched off for now: show the reason instead of a form that would
+    // only fail on submit. Reading reviews carries on as normal.
+    const paused = SITE.reviewsPaused === true;
+    const notice = $("#reviewsPaused");
+    if (notice) {
+      notice.textContent = paused ? (T("reviewsPausedNote") || "") : "";
+      notice.hidden = !paused;
+    }
+    if (paused) {
+      box.hidden = true;
+      who.hidden = true;
+      form.hidden = true;
+      return;
+    }
+
+    const signedIn = Boolean(session);
+    box.hidden = signedIn;
+    who.hidden = !signedIn;
+    form.hidden = !signedIn;
+
+    if (signedIn) {
+      const label = T("signedInAs");
+      $("#rWhoText").textContent = typeof label === "function"
+        ? label(session.email) : session.email;
+    } else {
+      // Back to the first step, so a signed-out visitor isn't met with a
+      // code box for an address they can no longer remember entering.
+      $("#emailStep").hidden = false;
+      $("#codeStep").hidden = true;
+      $("#rAuthMsg").textContent = "";
+    }
+  }
+
+  /* Re-read the list and repaint it. At module level because a delete needs
+     it just as much as the form does. */
+  async function reloadReviews() {
+    if (!loadedReviews) status(T("loading"));
+    try {
+      loadedReviews = await fetchReviews();
+      status("");
+      paintSummary(loadedReviews);
+      paintReviews(loadedReviews);
+    } catch (err) {
+      // Say so plainly rather than showing an empty section that looks fine.
+      status(T("loadError"), "error");
+      paintSummary(loadedReviews || []);
+      console.error("[reviews] load failed:", err);
+    }
+  }
+
+  /* The two steps of getting an address confirmed. Bound once; the markup
+     they drive is static, so a language switch only relabels it. */
+  let authBound = false;
+
+  function bindAuth() {
+    if (authBound) return;
+    authBound = true;
+
+    const emailStep = $("#emailStep");
+    const codeStep  = $("#codeStep");
+    const emailEl   = $("#rEmail");
+    const codeEl    = $("#rCode");
+    const sendBtn   = $("#rSendCode");
+    const verifyBtn = $("#rVerify");
+    const msg       = $("#rAuthMsg");
+
+    const say = (text, kind) => {
+      msg.textContent = text;
+      msg.className = "rform__msg" + (kind ? ` is-${kind}` : "");
+    };
+
+    emailStep.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = emailEl.value.trim();
+
+      // Deliberately loose. Whether the address really exists is settled by
+      // whether a code arrives, not by a regex arguing about it here.
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        say(T("errEmail"), "error");
+        emailEl.focus();
+        return;
+      }
+
+      sendBtn.disabled = true;
+      say(T("sending"));
+
+      try {
+        await sendCode(email);
+        emailStep.hidden = true;
+        codeStep.hidden = false;
+        const sent = T("codeSent");
+        say(typeof sent === "function" ? sent(email) : sent, "ok");
+        codeEl.value = "";
+        codeEl.focus();
+      } catch (err) {
+        say(T("errSend"), "error");
+        console.error("[reviews] could not send code:", err);
+      } finally {
+        sendBtn.disabled = false;
+      }
+    });
+
+    codeStep.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const code = codeEl.value.trim();
+      const email = emailEl.value.trim();
+
+      if (!/^\d{6}$/.test(code)) {
+        say(T("errCode"), "error");
+        codeEl.focus();
+        return;
+      }
+
+      verifyBtn.disabled = true;
+      say(T("verifying"));
+
+      try {
+        saveSession(await verifyCode(email, code));
+        say("");
+        paintAuthState();
+        renderReviews();          // their own review can now carry a delete button
+      } catch (err) {
+        say(T("errCodeWrong"), "error");
+        codeEl.select();
+        console.error("[reviews] code rejected:", err);
+      } finally {
+        verifyBtn.disabled = false;
+      }
+    });
+
+    $("#rChangeEmail").addEventListener("click", () => {
+      codeStep.hidden = true;
+      emailStep.hidden = false;
+      say("");
+      emailEl.focus();
+    });
+
+    $("#rSignOut").addEventListener("click", signOut);
   }
 
   /* Five buttons, arrow-key navigable, because a rating is a radio group. */
@@ -624,7 +930,9 @@
     const textEl = $("#rComment");
 
     $("#reviewsCta").hidden = true;
-    form.hidden = false;
+
+    bindAuth();
+    paintAuthState();          // decides between the code box and the form
 
     // Rebuilt each time so the star labels follow the language. The submit
     // handler reads `picker` from this scope, so it always sees the current one.
@@ -637,21 +945,6 @@
       paintSummary(loadedReviews);
       paintReviews(loadedReviews);
     }
-
-    const load = async () => {
-      if (!loadedReviews) status(T("loading"));
-      try {
-        loadedReviews = await fetchReviews();
-        status("");
-        paintSummary(loadedReviews);
-        paintReviews(loadedReviews);
-      } catch (err) {
-        // Say so plainly rather than showing an empty section that looks fine.
-        status(T("loadError"), "error");
-        paintSummary(loadedReviews || []);
-        console.error("[reviews] load failed:", err);
-      }
-    };
 
     // Listeners attach once. Without this guard, switching language would
     // bind a second submit handler and post every review twice.
@@ -680,11 +973,6 @@
           if (el) el.focus();
         };
 
-        // Deliberately before the field checks: someone already past their
-        // one review shouldn't be walked through fixing a form that is not
-        // going to be accepted either way.
-        if (withinCooldown()) return fail(T("errAlready"));
-
         // Three seconds, not thirty. Long enough that nothing automated gets
         // through, short enough that pasting a prepared review and pressing
         // straight away only costs one extra press.
@@ -704,16 +992,21 @@
 
         try {
           await postReview({ name, rating, comment });
-          rememberPost();
           form.reset();
           picker.reset();
           $("#rCount").textContent = "0";
           msg.className = "rform__msg is-ok";
           msg.textContent = T("thanks");
-          await load();
+          loadedReviews = null;              // re-read, so their own row comes
+          await reloadReviews();             // back with a delete button on it
         } catch (err) {
+          const detail = String((err && err.message) || "");
           msg.className = "rform__msg is-error";
-          msg.textContent = T("errPost");
+          // 23505 is the unique index that gives one account one review. Say
+          // what to do about it rather than "that didn't send".
+          msg.textContent = /23505|duplicate key/i.test(detail)
+            ? T("errAlready")
+            : T("errPost");
           console.error("[reviews] post failed:", err);
         } finally {
           submit.disabled = false;
@@ -723,7 +1016,7 @@
 
     // Only actually go to the network the first time. Later calls come from
     // a language switch, and the repaint above has already handled those.
-    if (!loadedReviews) await load();
+    if (!loadedReviews) await reloadReviews();
   }
 
   function initStaticReviews() {

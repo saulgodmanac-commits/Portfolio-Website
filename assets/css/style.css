@@ -707,6 +707,20 @@ body:not(.works-open) .foot{display:none}
 }
 .review__tr[data-hint-text]:hover::after,
 .review__tr[data-hint-text]:focus-visible::after{transform:translate(0,0)}
+/* Deleting your own. Kept in the same quiet register as Translate rather than
+   coloured like a warning — it only ever appears on a review you wrote, and
+   it asks before it does anything. */
+.review__del{
+  background:none;border:0;padding:0 0 2px;cursor:pointer;
+  font:inherit;font-size:.68rem;font-weight:500;
+  letter-spacing:.14em;text-transform:uppercase;
+  color:var(--grey-dim);border-bottom:1px solid var(--line);
+  transition:color .3s,border-color .3s;
+}
+.review__del:hover{color:var(--err);border-color:var(--err)}
+.review__del:disabled{cursor:default;opacity:.55}
+.review__del:focus-visible{outline:1px solid var(--fg);outline-offset:3px;border-radius:2px}
+
 .review__trnote{
   font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;
   color:var(--grey-dim);
@@ -746,6 +760,64 @@ body:not(.works-open) .foot{display:none}
 .reviews__status{margin:0 0 24px;font-size:.85rem;color:var(--grey)}
 .reviews__status.is-error{color:var(--err)}
 .reviews__status[hidden]{display:none}
+
+/* Reviews temporarily closed. Set apart with a rule, like the other places
+   this site says something plainly rather than dressing it up. */
+.rpaused{
+  margin:0;padding-left:clamp(14px,1.6vw,20px);
+  border-left:2px solid var(--line);
+  font-size:.9rem;line-height:1.8;font-weight:400;color:var(--grey);
+  max-width:52ch;
+}
+.rpaused[hidden]{display:none}
+
+/* ---------- verifying an address ----------
+   Same frame as the review form it stands in front of, so it reads as the
+   first step of one thing rather than a separate obstacle. */
+.rauth{
+  border:1px solid var(--line);border-radius:2px;
+  padding:clamp(24px,3vw,40px);
+  display:grid;gap:clamp(14px,2vw,20px);max-width:640px;
+}
+.rauth[hidden]{display:none}
+.rauth__intro{
+  margin:0;font-size:.9rem;line-height:1.75;font-weight:400;
+  color:var(--grey);max-width:52ch;
+}
+.rauth__step{display:grid;gap:clamp(14px,2vw,20px);justify-items:start}
+.rauth__step[hidden]{display:none}
+.rauth__step .rform__field{width:100%}
+.rauth__step .btn-ghost{background:none;cursor:pointer;font:inherit;font-size:.8rem}
+.rauth__step .btn-ghost:disabled{opacity:.5;cursor:default}
+.rauth__actions{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+
+.rauth input[type="email"],.rauth input[type="text"]{
+  width:100%;background:transparent;color:var(--fg);
+  border:1px solid var(--line);border-radius:2px;
+  padding:12px 14px;font:inherit;font-size:.95rem;font-weight:300;
+  transition:border-color .3s;
+}
+.rauth input:focus{outline:none;border-color:var(--grey)}
+.rauth ::placeholder{color:var(--grey-dim)}
+/* The code is six digits read off a screen and typed back — space them out
+   so a mistyped one is easy to spot. */
+#rCode{letter-spacing:.4em;font-variant-numeric:tabular-nums;max-width:12ch}
+
+/* A plain word, for the things that undo rather than proceed. */
+.rauth__link{
+  background:none;border:0;padding:0 0 2px;cursor:pointer;
+  font:inherit;font-size:.75rem;color:var(--grey-dim);
+  border-bottom:1px solid var(--line);transition:color .3s,border-color .3s;
+}
+.rauth__link:hover{color:var(--fg);border-color:var(--fg)}
+.rauth__link:focus-visible{outline:1px solid var(--fg);outline-offset:3px;border-radius:2px}
+
+.rauth__who{
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  margin:0 0 clamp(16px,2vw,24px);
+  font-size:.8rem;color:var(--grey);
+}
+.rauth__who[hidden]{display:none}
 
 /* ---------- the form ---------- */
 .rform{

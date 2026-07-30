@@ -112,14 +112,85 @@ The checks in that SQL are the real protection: they run on Supabase's server,
 where a visitor cannot reach them. The length limits and the rating range are
 enforced there, not just in the browser.
 
+### Who may leave a review
+
+**A review now requires a confirmed email address.** The visitor types theirs,
+Supabase mails a six-digit code, they type it back, and the token that comes
+out of that is what signs the insert. They never leave the page.
+
+This is not a form field that asks nicely — the database refuses any insert
+that isn't signed by a verified account, so posting straight to the API with
+the anon key gets turned away. One account gets one review, and a person can
+delete their own review and write another.
+
+**You must run this SQL, or nobody will be able to post at all.** Open
+**SQL Editor** in Supabase:
+
+```sql
+-- Remove the review left by mistake while this was being built.
+delete from public.reviews
+where id = 'fe461854-4240-493f-95e7-7289be51ba69';
+
+-- Tie a review to the account that wrote it.
+alter table public.reviews
+  add column if not exists user_id uuid references auth.users(id) on delete cascade;
+
+-- One account, one review. Existing rows have no account and are left alone,
+-- because Postgres lets a unique index hold any number of nulls.
+create unique index if not exists reviews_one_per_user
+  on public.reviews (user_id);
+
+-- Anyone may read. Only a verified account may post, and only as itself.
+drop policy if exists "public insert" on public.reviews;
+create policy "verified insert" on public.reviews
+  for insert to authenticated
+  with check (auth.uid() = user_id);
+
+-- A person may delete their own review, and nobody else's.
+drop policy if exists "own delete" on public.reviews;
+create policy "own delete" on public.reviews
+  for delete to authenticated
+  using (auth.uid() = user_id);
+```
+
+**Then make the code appear in the email.** By default Supabase's magic-link
+template sends a *link*, not a code, and the box on the page will never
+accept anything. Go to **Authentication → Email Templates → Magic Link** and
+make sure the body contains the token, for example:
+
+```html
+<h2>Your code</h2>
+<p>Enter this code to leave your review:</p>
+<p style="font-size:24px;letter-spacing:6px"><strong>{{ .Token }}</strong></p>
+<p>It expires in an hour. If you didn't ask for this, ignore this email.</p>
+```
+
+`{{ .Token }}` is the six digits. Without it in the template, nothing arrives
+that the form can use.
+
+**The free email quota is small.** Supabase's built-in mailer is meant for
+development and allows only a handful of messages an hour across the whole
+project. That is fine while reviews trickle in. If you ever ask a group of
+clients for reviews on the same day, most of them will silently get no code —
+so before that, add your own SMTP under **Authentication → Emails → SMTP
+Settings** (Resend, Postmark and Brevo all have usable free tiers).
+
+**What this costs you.** Asking for an email loses you some reviews — a
+willing client who can't be bothered to check their inbox just closes the tab.
+That is the trade. What you get is that every review on the page came from a
+reachable human, which is worth more to the next client reading it than a
+larger number of reviews nobody can vouch for.
+
 ### Keeping spam out
 
 There are two layers, and only one of them matters.
 
 **In the browser** (already working, nothing to do): a hidden honeypot field,
 a three-second trap so nothing automated can submit the instant the page
-loads, a 12-hour cooldown per browser (`reviewCooldownHours` in `SITE`), and
-checks that reject web addresses and single-character gibberish.
+loads, and checks that reject web addresses and single-character gibberish.
+There is no per-browser cooldown any more — a verified address and one review
+per account do that job properly, and in the database rather than in a
+`localStorage` value anyone can clear.
 
 **On Supabase** (you must run this): the browser checks stop the ordinary
 nuisance and tell an honest person what's wrong, but anyone willing to post
@@ -195,10 +266,13 @@ publishing — see the note at the end of the next section.
   That is how Supabase is designed to work, and it is safe *because* the
   policies above only permit reading and inserting. **Never** put the
   `service_role` key in this file — it ignores all policies.
-- **Anyone can post.** You chose instant publishing, so a review appears the
-  moment it is submitted. There is a hidden honeypot field that stops naive
-  bots, but a determined person can still post rubbish. To remove something,
-  open **Table Editor → reviews** in Supabase and delete the row.
+- **Anyone with a working email address can post**, and a review appears the
+  moment it is submitted. That is a much smaller door than it was, but it is
+  still a door: a determined person with an inbox can post rubbish. To remove
+  something, open **Table Editor → reviews** in Supabase and delete the row.
+- **A reviewer can delete their own review** from the page, and only their
+  own — the delete button appears on a review you wrote, and the policy above
+  refuses the request regardless of what the page shows.
 - If you later want reviews to wait for your approval, add an
   `approved boolean default false` column, change the read policy to
   `using (approved)`, and tell me — the front-end needs a one-line change.
