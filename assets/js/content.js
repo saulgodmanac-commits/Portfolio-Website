@@ -45,7 +45,7 @@ const SITE = {
   // Temporarily takes the review form off the page and says so, while the
   // email side of that is still being set up. Existing reviews carry on
   // showing as normal. Set to false to put the form back.
-  reviewsPaused: true,
+  reviewsPaused: false,
 
   // Add or remove freely. An empty list [] hides the row entirely.
   socials: []
@@ -406,7 +406,7 @@ const TEXT = {
       hintPost: "Publishes your review straight away",
       hintCurEur: "Show prices in euros — what you'd be invoiced",
       hintCurUsd: "Show the same prices in US dollars, roughly",
-      hintTranslate: "Switches between the original and a machine translation",
+      hintTranslate: "Switches between the original and an AI translation",
 
 
       selectedWork: "Selected work",
@@ -485,7 +485,9 @@ const TEXT = {
       // machine's, not the client's.
       translate: "Translate", showOriginal: "Show original",
       translating: "Translating…",
-      translatedNote: "Machine translation",
+      // Says AI outright, and says it can be wrong. It genuinely can: on one
+      // of these very reviews it turned praise into an instruction.
+      translatedNote: "AI translation — may not be exact",
       // Used instead when you have written the translation yourself, which
       // is the only way to be certain a review reads the way it should.
       translatedHuman: "Translated",
@@ -615,7 +617,7 @@ const TEXT = {
       hintPost: "Публікує ваш відгук одразу",
       hintCurEur: "Показати ціни в євро — саме так виставляється рахунок",
       hintCurUsd: "Показати ті самі ціни приблизно в доларах США",
-      hintTranslate: "Перемикає між оригіналом і машинним перекладом",
+      hintTranslate: "Перемикає між оригіналом і перекладом ШІ",
 
 
       selectedWork: "Вибрані роботи",
@@ -683,7 +685,7 @@ const TEXT = {
 
       translate: "Перекласти", showOriginal: "Показати оригінал",
       translating: "Перекладаємо…",
-      translatedNote: "Машинний переклад",
+      translatedNote: "Переклад ШІ — можливі неточності",
       translatedHuman: "Переклад",
       errTranslate: "Зараз не вдалося перекласти.",
       sameLanguage: "Уже цією мовою.",

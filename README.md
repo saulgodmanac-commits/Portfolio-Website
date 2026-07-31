@@ -502,6 +502,29 @@ labels live, and past about `.22` on `--wash-2` they drop under 4.5:1.
 Measured, the deepest corner is ~`rgb(220,216,207)` and `--grey-dim` clears
 it at 4.52:1 — there is very little headroom, so change one and re-measure.
 
+## The background
+
+Thin rings turning slowly behind everything, echoing the yin-yang. Black on
+the light theme, white on the dark one, at prime periods (181s, 233s, 149s)
+so they never return to the same arrangement. Markup is the `.bg` block at the
+top of `index.html`; everything else is `.bg__ring` in the CSS.
+
+The first attempt was three large soft gradient orbs, and it failed twice
+over — invisible *and* slow. Both failures are worth remembering:
+
+- **A big soft shape has to be faint to be safe over text, and once it is
+  faint enough to be safe you cannot see it.** A hairline is the opposite: it
+  covers almost none of a letter it passes behind, so it can be drawn at a
+  strength that actually reads without moving any contrast floor.
+- **A composited layer costs its AREA, not what you draw in it.** Three 78vmax
+  orbs meant three ~1000px layers held on the GPU for the life of the page,
+  pinned there by `will-change`. That was the whole of the reported lag.
+
+So: no `will-change`, no `filter`, no animated `background-position`. Rotation
+only, which needs no new raster — the compositor turns a layer it already has.
+`contain: layout paint` keeps the rings out of the rest of the page's work.
+If you add to this, keep to transforms and check the layer area first.
+
 ## A trap worth knowing
 
 Each `.work` row builds its own stacking context, so a `z-index` inside a row
@@ -509,6 +532,15 @@ cannot rise above a *later* row. That is why the hover tooltip was getting a
 line struck through it — the next row's 1px top border was painting over it.
 The fix is `.work:hover{position:relative;z-index:5}`, lifting the whole row.
 Anything else that needs to overflow a row will hit the same wall.
+
+Here is a second one. `.reveal` elements start at `opacity:0` and are only
+shown when the scroll observer marks them `is-in`. An element that was
+`display:none` at the moment that observer ran **never intersects anything, so
+it is never marked** — and unhiding it later leaves it invisible while still
+taking up space. This bit for real: a visitor who arrived already signed in
+and then signed out got a sign-in card that was there, occupied the layout,
+and could not be seen or used. Anything you reveal by changing state rather
+than by scrolling to it must be passed through `revealNow()` in `main.js`.
 - The headline is sized against screen height as well as width, so the
   yin-yang button stays above the fold on short laptop screens. If you make
   the name much longer, check it still fits.

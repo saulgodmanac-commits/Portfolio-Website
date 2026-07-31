@@ -43,11 +43,27 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Reviews are fetched as soon as the page runs, and the score sits in the
+     menu before anyone scrolls. Opening the connection here gets the DNS
+     lookup and TLS handshake out of the way while the CSS is still parsing,
+     instead of paying for them when the request is actually made. -->
+<link rel="preconnect" href="https://smsbimmgnzdxxtibwszq.supabase.co" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 
 <body class="is-loading">
+
+<!-- Slow orbits, echoing the yin-yang. Thin monochrome rings turning at
+     speeds that never line up. Decoration only, so it is hidden from screen
+     readers and cannot be reached by a cursor. -->
+<div class="bg" aria-hidden="true">
+  <span class="bg__ring bg__ring--a"></span>
+  <span class="bg__ring bg__ring--b"></span>
+  <span class="bg__ring bg__ring--c"></span>
+  <span class="bg__dot"></span>
+</div>
+
 
 <!-- Every word on this page is injected by JavaScript, so without it the
      visitor would get a blank screen and no way to reach me. -->
@@ -234,9 +250,13 @@
         <label class="rform__field">
           <span data-i18n="codeLabel">The 6-digit code</span>
           <!-- one-time-code lets a phone offer the code straight from the
-               notification, instead of making them swap apps to read it. -->
+               notification, instead of making them swap apps to read it.
+               The label says six because that is what this project is set to
+               send, but maxlength stays at 10: the OTP length is a Supabase
+               setting, not a fixed part of the protocol, and hard-coding 6
+               silently truncated a longer code as it was being typed. -->
           <input type="text" id="rCode" inputmode="numeric" autocomplete="one-time-code"
-                 maxlength="6" required
+                 maxlength="10" required
                  data-i18n-ph="codePlaceholder" placeholder="123456">
         </label>
         <div class="rauth__actions">

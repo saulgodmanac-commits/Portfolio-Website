@@ -26,6 +26,13 @@
   --ok:#1d6b38;
   --ease:cubic-bezier(.22,1,.36,1);
   --pad:clamp(20px,4vw,64px);
+
+  /* The turning rings. A hairline is not a background wash: it covers a
+     fraction of a percent of any letter it passes behind, so it can be
+     properly visible without touching the contrast floor the way a drifting
+     pool of shade would have. */
+  --ring-strong:rgba(0,0,0,.16);
+  --ring-soft:rgba(0,0,0,.09);
 }
 
 /* The dark half of the switch. Only the colours change — every rule below
@@ -39,13 +46,25 @@
   --fg:#f2f2f2;
   --fg-strong:#fff;
   --grey:#9a9a9a;
-  --grey-dim:#8a8a85;   /* same 4.5:1 floor, measured against the dark bg */
+  /* Was #8a8a85, which cleared 4.5:1 against the flat --bg (5.60:1) but not
+     against the pixels actually painted: over the brightest part of the top
+     wash — rgb(45,45,51) — it measured 3.93:1. This one measures 4.82:1 at
+     that same worst point. The rings don't enter into it; a hairline covers
+     too little of a letter to move a contrast ratio. If you change the wash,
+     re-solve this rather than eyeballing it. */
+  --grey-dim:#9a9a95;
   --line:#262626;
   --bg-blur:rgba(12,12,12,.82);
   --glow:rgba(255,255,255,.14);
   --ring:rgba(255,255,255,.18);
   --err:#e5a3a3;
   --ok:#a9d3b0;
+
+  /* White hairlines on near-black. They can run a little stronger here —
+     a thin light line on a dark field reads at a lower alpha than the
+     reverse, and there is no wash for them to fight with. */
+  --ring-strong:rgba(255,255,255,.20);
+  --ring-soft:rgba(255,255,255,.11);
 }
 html{color-scheme:light}
 :root[data-theme="dark"]{color-scheme:dark}
@@ -114,6 +133,80 @@ body{
   overflow-x:hidden;
 }
 body.is-loading{overflow:hidden}
+
+/* ---------- the turning background ----------
+   Thin rings orbiting slowly behind everything, echoing the yin-yang the
+   whole site is built around. Black on the light theme, white on the dark
+   one — no colour anywhere.
+
+   This replaced three large soft gradient orbs, which were both invisible
+   and slow. Two lessons worth keeping:
+
+   1. A big blurred shape has to be faint to be safe over text, and once it
+      is faint enough to be safe it can no longer be seen. A hairline has the
+      opposite property: it covers almost none of a letter, so it can be
+      drawn at a strength you actually notice.
+
+   2. The cost of a composited layer is its AREA, not how much is drawn in
+      it. Three 78vmax orbs meant three ~1000px layers held on the GPU for
+      the life of the page, plus `will-change` pinning them there. These are
+      smaller, there is no `will-change`, and a rotation needs no new raster
+      at all — the compositor turns the layer it already has. */
+.bg{
+  position:fixed;inset:0;z-index:-1;
+  overflow:hidden;pointer-events:none;
+  /* Nothing in here can affect the layout or paint of anything outside it,
+     so say so — it keeps the rings out of the rest of the page's work.
+     `layout paint` rather than `strict`: no need to also contain size when
+     inset:0 already fixes it. */
+  contain:layout paint;
+}
+.bg__ring{
+  position:absolute;display:block;
+  border-radius:50%;
+  /* A ring is rotationally symmetric, so turning a solid one would look
+     like nothing at all. Dashes give it something to see. */
+  border:1px dashed var(--ring-soft);
+}
+
+/* Prime periods — 181s, 233s, 149s — so the three never come back into the
+   same arrangement twice in any sitting. */
+.bg__ring--a{
+  width:66vmax;height:66vmax;top:-14vmax;left:-16vmax;
+  border-color:var(--ring-soft);
+  animation:turn 181s linear infinite;
+}
+.bg__ring--b{
+  width:44vmax;height:44vmax;bottom:-12vmax;right:-8vmax;
+  border-style:solid;
+  /* One lit quadrant: an arc, not a ring, so its travel is obvious. */
+  border-color:var(--ring-strong) transparent transparent transparent;
+  animation:turn 233s linear infinite reverse;
+}
+.bg__ring--c{
+  width:30vmax;height:30vmax;top:34vh;right:14vw;
+  border-color:var(--ring-soft);
+  animation:turn 149s linear infinite;
+}
+
+/* The one solid mark, riding the small ring like the dot in the taijitu.
+   It sits at twelve o'clock on that ring and turns about the ring's centre,
+   which is 15vmax (half of 30vmax) below it — hence the transform-origin.
+   Same 149s period as the ring, so it stays welded to it. */
+.bg__dot{
+  position:absolute;display:block;
+  width:7px;height:7px;border-radius:50%;
+  background:var(--ring-strong);
+  top:34vh;
+  right:calc(14vw + 15vmax - 3.5px);   /* centred over the ring */
+  transform-origin:50% 15vmax;         /* the ring's centre */
+  animation:turn 149s linear infinite;
+}
+
+@keyframes turn{
+  from{transform:rotate(0deg)}
+  to{transform:rotate(360deg)}
+}
 a{color:inherit;text-decoration:none}
 h1,h2,p,ol,figure{margin:0}
 ol{list-style:none;padding:0}
@@ -799,9 +892,10 @@ body:not(.works-open) .foot{display:none}
 }
 .rauth input:focus{outline:none;border-color:var(--grey)}
 .rauth ::placeholder{color:var(--grey-dim)}
-/* The code is six digits read off a screen and typed back — space them out
-   so a mistyped one is easy to spot. */
-#rCode{letter-spacing:.4em;font-variant-numeric:tabular-nums;max-width:12ch}
+/* Digits read off one screen and typed into another — space them out so a
+   mistyped one is easy to spot. Sized for six, with room to spare rather
+   than a hard stop, since the length is a project setting. */
+#rCode{letter-spacing:.4em;font-variant-numeric:tabular-nums;max-width:14ch}
 
 /* A plain word, for the things that undo rather than proceed. */
 .rauth__link{
@@ -946,6 +1040,10 @@ body:not(.works-open) .foot{display:none}
     transition-duration:.01ms!important;
   }
   .line__in{transform:none}
+  /* The rings stay, they just stop turning — the composition still reads as
+     a background rather than a flat wall, and nobody gets motion they asked
+     their system not to be given. */
+  .bg__ring,.bg__dot{animation:none}
   .nav,.hero__meta,.hero__socials{opacity:1;transform:none}
   /* The drop is the one animation that also controls visibility — without
      these the button and its label would never appear. */

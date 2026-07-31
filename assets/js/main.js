@@ -298,11 +298,18 @@
 
   const starRow = (n) => "★".repeat(n) + "☆".repeat(5 - n);
 
-  // Dates follow the chosen language, not the visitor's browser.
+  /* Dates follow the chosen language, not the visitor's browser. Day, month,
+     year and the time of day: a review that says exactly when it was left
+     reads as a record of something that happened, which is the whole point of
+     having them. The clock is the reader's own — a stored timestamp is UTC,
+     and "21:35" means nothing unless it is 21:35 where they are standing. */
   const fmtDate = (iso) => {
     const d = new Date(iso);
-    return isNaN(d) ? "" : d.toLocaleDateString(L.locale,
-      { year: "numeric", month: "short", day: "numeric" });
+    if (isNaN(d)) return "";
+    return d.toLocaleString(L.locale, {
+      year: "numeric", month: "short", day: "numeric",
+      hour: "2-digit", minute: "2-digit"
+    });
   };
 
   /* select=* rather than a named list on purpose: it picks up the optional
@@ -754,17 +761,23 @@
       notice.textContent = paused ? (T("reviewsPausedNote") || "") : "";
       notice.hidden = !paused;
     }
-    if (paused) {
-      box.hidden = true;
-      who.hidden = true;
-      form.hidden = true;
-      return;
-    }
+    const signedIn = !paused && Boolean(session);
+    box.hidden = paused || signedIn;
+    who.hidden = paused || !signedIn;
+    form.hidden = paused || !signedIn;
 
-    const signedIn = Boolean(session);
-    box.hidden = signedIn;
-    who.hidden = !signedIn;
-    form.hidden = !signedIn;
+    /* These carry .reveal, which starts them transparent until the scroll
+       observer marks them seen. An element that was display:none when that
+       observer ran never intersects anything, so it never gets marked — and
+       unhiding it later leaves it at opacity:0 forever. Not hypothetical: a
+       visitor who arrived already signed in and then signed out got a sign-in
+       card that was present, took up space, and could not be seen or used.
+       Anything revealed by state rather than by scrolling is marked here, and
+       this call must not sit behind an early return — that is how the bug got
+       in the first time. */
+    revealNow(box, form, notice);
+
+    if (paused) return;
 
     if (signedIn) {
       const label = T("signedInAs");
@@ -853,7 +866,21 @@
       const code = codeEl.value.trim();
       const email = emailEl.value.trim();
 
-      if (!/^\d{6}$/.test(code)) {
+      // Nothing to verify a code against. Supabase answers this with a 400
+      // about email and phone numbers that means nothing to a visitor, so
+      // send them back a step instead.
+      if (!email) {
+        codeStep.hidden = true;
+        emailStep.hidden = false;
+        say(T("errEmail"), "error");
+        emailEl.focus();
+        return;
+      }
+
+      // The project sends six, and the label says so. Accepting up to ten
+      // anyway costs nothing and means changing that setting later doesn't
+      // quietly break this box — which is exactly what it did once already.
+      if (!/^\d{6,10}$/.test(code)) {
         say(T("errCode"), "error");
         codeEl.focus();
         return;
@@ -1218,6 +1245,14 @@
      previous observer is thrown away first — otherwise they pile up, one
      per call, all watching the same elements. */
   let revealObserver = null;
+
+  /* For anything shown by a state change rather than by scrolling to it.
+     The observer can only reveal what it has been able to see. */
+  function revealNow(...els) {
+    els.forEach(el => {
+      if (el && !el.hidden) el.classList.add("is-in");
+    });
+  }
 
   function watchReveals() {
     const targets = $$(".reveal");
