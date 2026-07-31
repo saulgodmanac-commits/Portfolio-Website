@@ -469,10 +469,25 @@ hero was scrolled far out of view, so the compositor did invisible work on
 every frame. The `is-away` class (set by an IntersectionObserver on the hero)
 pauses them. **If you add another looping animation, pause it the same way.**
 
-Two things that look like obvious culprits are not: removing
-`background-attachment: fixed` made scrolling *worse* in testing, and the
-nav's `backdrop-filter` blur barely registered. Measure before "optimising"
-either of them.
+The nav's `backdrop-filter` blur barely registered when measured. It is the
+one remaining per-frame cost on this page — a blur has to re-sample what is
+behind it on every scrolled frame — so if scrolling ever feels heavy on a slow
+machine, that is the next lever: drop the radius from 12px, or swap it for a
+plain opaque `--bg-blur`.
+
+**`background-attachment: fixed` is gone, and this note used to say keeping it
+was the right call.** That was half right. Deleting the line on its own does
+make things worse, because it also deletes the fixed positioning — the washes
+start sliding and repeating down the page, and get repainted anyway. But a
+fixed background on a *scrolling* element is one of the more expensive things
+you can ask a browser for: the background has to stay put while the element
+moves, so it is re-rasterised every frame. The answer was to move the washes,
+not remove them. They now live on `.bg`, which is `position:fixed` already, so
+they are painted once and simply held still while the page travels underneath.
+Identical to look at, and nothing repaints while you scroll.
+
+The general shape of that mistake is worth keeping: "we tried removing X and it
+got worse" only rules out *removing* X. It says nothing about moving it.
 
 A language switch does **not** rebuild the script rows. Their text is the same
 in both languages, so only the labels around them swap, via `data-i18n` and
