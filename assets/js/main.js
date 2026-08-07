@@ -489,6 +489,18 @@
     throw lastErr || new Error("no translation provider answered");
   }
 
+  /* A short technical code, appended to the friendly sentence so that a
+     screenshot is enough to diagnose a failure. Nobody should have to open a
+     developer console to tell me what went wrong — and when they can't, I end
+     up guessing, which has already cost more time than this line saves.
+     Pulls the HTTP status and Postgres' own error code when either is there. */
+  function errCode(detail) {
+    const http = (String(detail).match(/\b([45]\d{2})\b/) || [])[1];
+    const sql  = (String(detail).match(/"code"\s*:\s*"?([A-Za-z0-9]+)"?/) || [])[1];
+    const seen = [...new Set([http, sql].filter(Boolean))];
+    return seen.length ? ` [${seen.join("/")}]` : "";
+  }
+
   /* Which reviews are currently on screen, so a button can find its own
      original text by index without stuffing a copy into the markup. */
   let paintedReviews = [];
@@ -916,9 +928,9 @@
           const seconds = Number(limited[1]) || 60;
           say(typeof wording === "function" ? wording(seconds) : T("errSend"), "error");
         } else if (/^sendfail/.test(detail)) {
-          say(T("errSendServer"), "error");
+          say(T("errSendServer") + errCode(detail), "error");
         } else {
-          say(T("errSend"), "error");
+          say(T("errSend") + errCode(detail), "error");
         }
         console.error("[reviews] could not send code:", err);
       } finally {
@@ -1116,7 +1128,7 @@
             // do about it rather than "that didn't send".
             msg.textContent = T("errAlready");
           } else {
-            msg.textContent = T("errPost");
+            msg.textContent = T("errPost") + errCode(detail);
           }
           console.error("[reviews] post failed:", err);
         } finally {

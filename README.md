@@ -140,7 +140,16 @@ alter table public.reviews
 create unique index if not exists reviews_one_per_user
   on public.reviews (user_id);
 
--- Anyone may read. Only a verified account may post, and only as itself.
+-- Anyone may read — INCLUDING signed-in visitors. The original "public read"
+-- policy is scoped to the anon role, and a signed-in visitor is a different
+-- role ('authenticated'), so without this they cannot read the table at all.
+-- That breaks posting, not just reading: an insert returns the new row, and
+-- RLS checks the read side of that too. Policies are OR'd, so this adds to
+-- the existing one rather than replacing it.
+create policy "authenticated read" on public.reviews
+  for select to authenticated using (true);
+
+-- Only a verified account may post, and only as itself.
 drop policy if exists "public insert" on public.reviews;
 create policy "verified insert" on public.reviews
   for insert to authenticated
@@ -254,6 +263,15 @@ create trigger reviews_guard
 
 `security definer` is load-bearing: without it the count runs as the anonymous
 visitor and row-level security could hide the very rows it needs to count.
+
+**A trap in the same family, which cost a day.** `anon` and `authenticated` are
+two different Postgres roles, and a policy granted `to anon` does *nothing* for
+a signed-in visitor. A policy that reads "anyone may read" in the comment but
+says `to anon` in the code is a lie you will not notice, because the review
+list is fetched with the anon key and keeps working perfectly. What broke was
+*posting* — an insert returns the new row, RLS checks the read side of that
+return, and the whole request failed with nothing but a generic error. When a
+policy misbehaves, check which **role** it names before anything else.
 
 To loosen or tighten it, change the two intervals. If you ever get a burst of
 legitimate reviews at once — say you ask a group of clients on the same day —
