@@ -1417,24 +1417,59 @@
     const label = $("#enterLabel");
     const works = $("#works");
 
-    const scrollTo = (el) =>
-      el.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    /* Marks the page as travelling for the duration of a smooth scroll.
+       The nav's backdrop blur has to re-sample and re-blur whatever is behind
+       it on every frame the page moves, and it switches on the moment we pass
+       24px — which is immediately. Dropping the blur while in motion costs
+       nothing visually (the bar is 86% opaque anyway, and it is moving) and
+       gives the frames back to the scroll itself. */
+    const scrollTo = (el) => {
+      if (reduceMotion) {
+        el.scrollIntoView({ behavior: "auto", block: "start" });
+        return;
+      }
+
+      document.body.classList.add("is-travelling");
+      const settle = () => document.body.classList.remove("is-travelling");
+
+      // scrollend is exact where it exists; the timeout covers Safari and
+      // anything that never fires it, so the blur can't be left switched off.
+      if ("onscrollend" in window) {
+        addEventListener("scrollend", settle, { once: true });
+        setTimeout(settle, 1500);          // belt and braces
+      } else {
+        setTimeout(settle, 700);
+      }
+
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
 
     const isOpen = () => document.body.classList.contains("works-open");
 
     // `target` lets the menu open the site and land on the section asked for,
     // instead of always dumping the visitor at the top of Work.
     const open = (target = works) => {
-      if (!isOpen()) {
+      const first = !isOpen();
+      if (first) {
         document.body.classList.add("works-open");
         works.setAttribute("aria-hidden", "false");
         btn.setAttribute("aria-expanded", "true");
         label.textContent = T("entered");
-        watchReveals();          // sections revealed just now need observing
       }
-      // The sections were display:none a moment ago and have no geometry yet;
-      // wait a frame so scrollIntoView measures the real position.
-      requestAnimationFrame(() => scrollTo(target));
+
+      /* Two frames, not one, and the reason is worth keeping.
+         requestAnimationFrame runs BEFORE the paint, so scrolling from inside
+         a single frame started a smooth-scroll animation while the browser
+         still had five sections' worth of just-unhidden content to lay out
+         and paint. The scroll's opening frames were dropped into that work —
+         which is the stutter you feel on pressing the button.
+         Waiting for the second frame means the layout and first paint are
+         behind us, and the scroll starts against a settled page. */
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        // Observing is style work too, so it also stays out of the busy frame.
+        if (first) watchReveals();
+        scrollTo(target);
+      }));
     };
 
     // Pressing the yin-yang is the only way in. If the visitor was aiming at

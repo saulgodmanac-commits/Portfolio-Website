@@ -260,6 +260,15 @@ ol{list-style:none;padding:0}
   border-bottom:1px solid var(--line);
   padding-top:16px;padding-bottom:16px;
 }
+/* A blur re-samples everything behind it on every frame the page moves, and
+   this one switches on the instant you scroll past 24px — right as the site
+   opens. While the page is travelling it buys nothing: the bar is already
+   86% opaque and the backdrop is a smear. Give those frames to the scroll
+   and put the blur back the moment it stops. */
+.is-travelling .nav.is-stuck{
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
+}
 /* Weight 400, not 500: only Cormorant 300 and 400 are loaded, and asking
    for 500 makes the browser synthesise a smeared faux-bold. */
 .nav__name{
