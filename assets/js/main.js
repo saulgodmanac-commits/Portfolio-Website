@@ -703,7 +703,27 @@
       headers: authHeaders(),
       body: JSON.stringify({ email, create_user: true })
     });
-    if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+    if (res.ok) return;
+
+    const body = await res.text();
+
+    /* One code per address per minute. Asking again inside that window comes
+       back 429 with the remaining wait written into the message — and the old
+       "try again in a moment" invited exactly the repeated pressing that keeps
+       the window shut. Carry the number through so the page can say it. */
+    if (res.status === 429) {
+      const seconds = (body.match(/after (\d+) second/i) || [])[1];
+      throw new Error(`ratelimit ${seconds || ""}`);
+    }
+
+    /* A 5xx here is the mail provider refusing or failing — a fault at this
+       end, which no amount of the visitor trying again will mend. Tag it so
+       they get told that, rather than being sent round a loop that cannot
+       succeed. If you ever see this in the wild, check Brevo's logs: a
+       sender that has fallen out of verification is the usual reason. */
+    if (res.status >= 500) throw new Error(`sendfail ${res.status} ${body}`);
+
+    throw new Error(`${res.status} ${body}`);
   }
 
   async function verifyCode(email, token) {
@@ -886,7 +906,20 @@
         codeEl.value = "";
         codeEl.focus();
       } catch (err) {
-        say(T("errSend"), "error");
+        const detail = String((err && err.message) || "");
+        const limited = detail.match(/^ratelimit\s*(\d*)/);
+
+        if (limited) {
+          // Naming the wait is the difference between "it's broken" and
+          // "wait a moment" — and stops them pressing the window shut again.
+          const wording = T("errTooSoon");
+          const seconds = Number(limited[1]) || 60;
+          say(typeof wording === "function" ? wording(seconds) : T("errSend"), "error");
+        } else if (/^sendfail/.test(detail)) {
+          say(T("errSendServer"), "error");
+        } else {
+          say(T("errSend"), "error");
+        }
         console.error("[reviews] could not send code:", err);
       } finally {
         sendBtn.disabled = false;

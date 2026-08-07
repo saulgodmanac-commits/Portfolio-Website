@@ -466,6 +466,13 @@ const TEXT = {
       errCode: "Please enter the 6-digit code from the email.",
       errCodeWrong: "That code didn't work. Check it, or ask for a new one.",
       errSend: "Couldn't send the code. Please try again in a moment.",
+      // n -> seconds still to wait. One code per address per minute.
+      errTooSoon: (n) => `A code has already been sent — check your inbox and ` +
+                         `your spam folder. You can ask for another in ${n} seconds.`,
+      // The mail provider failed, which is my problem and not the visitor's.
+      // Don't send them round a retry loop that cannot work; give them a way out.
+      errSendServer: "The code couldn't be sent — that's a fault at my end, not yours. " +
+                     "Please try again later, or just email me directly.",
 
       // Removing a review you left yourself.
       deleteReview: "Delete", deleting: "Deleting…",
@@ -672,6 +679,10 @@ const TEXT = {
       errCode: "Введіть 6-значний код із листа.",
       errCodeWrong: "Код не підійшов. Перевірте його або замовте новий.",
       errSend: "Не вдалося надіслати код. Спробуйте ще раз за хвилину.",
+      errTooSoon: (n) => `Код уже надіслано — перевірте пошту і теку зі спамом. ` +
+                         `Наступний можна запросити через ${n} с.`,
+      errSendServer: "Не вдалося надіслати код — це збій з мого боку, не з вашого. " +
+                     "Спробуйте пізніше або просто напишіть мені на пошту.",
 
       deleteReview: "Видалити", deleting: "Видаляємо…",
       confirmDelete: "Видалити ваш відгук? Це не можна скасувати.",
