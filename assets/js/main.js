@@ -182,6 +182,18 @@
       el.textContent = priceLabel(el.dataset.eur, el.hasAttribute("data-price-from"));
     });
     paintServicesNote();
+    remeasureOpenPanels();
+  }
+
+  /* An open panel is capped at a measured pixel height until its transition
+     ends and the cap is released. Change the text inside during that window
+     and the panel clips whatever no longer fits. Re-measuring costs nothing
+     and closes the whole class of bug, not just the price case. */
+  function remeasureOpenPanels() {
+    $$(".work.is-open .work__panel").forEach(panel => {
+      const cap = panel.style.maxHeight;
+      if (cap && cap !== "none") panel.style.maxHeight = panel.scrollHeight + "px";
+    });
   }
 
   /* The services line, plus the conversion caveat while dollars are showing. */
@@ -339,6 +351,15 @@
       },
       body: JSON.stringify({ ...review, user_id: session.id })
     });
+
+    /* An expired or rejected token is not "try again in a moment" — retrying
+       with the same dead token fails forever. Tag it so the caller can send
+       them back to verify instead of leaving them pressing a button that
+       cannot work. 403 covers a token whose user no longer satisfies the
+       insert policy; both mean: sign in again. */
+    if (res.status === 401 || res.status === 403) {
+      throw new Error(`auth ${res.status} ${await res.text()}`);
+    }
     if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
     return (await res.json())[0];
   }
@@ -650,6 +671,12 @@
 
   let session = loadSession();      // { access_token, refresh_token, expires_at, email, id }
 
+  /* When the review form actually became fillable — not when the page loaded.
+     Those are minutes apart now that the form sits behind email verification,
+     and timing from load made the three-second trap below a no-op: by the time
+     anyone could type into the form, the window had long since passed. */
+  let formShownAt = 0;
+
   function loadSession() {
     try {
       const saved = JSON.parse(localStorage.getItem(AUTH_KEY) || "null");
@@ -765,6 +792,11 @@
     box.hidden = paused || signedIn;
     who.hidden = paused || !signedIn;
     form.hidden = paused || !signedIn;
+
+    // Start the clock the moment the form is reachable, and stop it whenever
+    // it goes away again, so signing out and back in re-arms the trap.
+    if (!form.hidden && !formShownAt) formShownAt = Date.now();
+    if (form.hidden) formShownAt = 0;
 
     /* These carry .reveal, which starts them transparent until the scroll
        observer marks them seen. An element that was display:none when that
@@ -946,7 +978,7 @@
     box.addEventListener("mouseleave", () => paint(value));
     paint(0);
 
-    return { get: () => value, reset: () => set(0) };
+    return { get: () => value, set, reset: () => set(0) };
   }
 
   async function initLiveReviews() {
@@ -963,7 +995,13 @@
 
     // Rebuilt each time so the star labels follow the language. The submit
     // handler reads `picker` from this scope, so it always sees the current one.
+    // Carry the chosen rating across: the name and review text survive a
+    // language switch because they are static markup, and losing only the
+    // stars left people submitting a form that then told them to pick a
+    // rating they had already picked.
+    const keptRating = picker ? picker.get() : 0;
     picker = buildStarPicker();
+    if (keptRating) picker.set(keptRating);
 
     // A language switch only changes wording, so repaint what we already
     // have instead of asking the database for it again.
@@ -977,10 +1015,6 @@
     // bind a second submit handler and post every review twice.
     if (!reviewsBound) {
       reviewsBound = true;
-
-      // When the form became fillable. A person needs seconds to read the
-      // labels and type; a script submits the moment the page is ready.
-      const shownAt = Date.now();
 
       textEl.addEventListener("input", () => {
         $("#rCount").textContent = String(textEl.value.length);
@@ -1000,10 +1034,11 @@
           if (el) el.focus();
         };
 
-        // Three seconds, not thirty. Long enough that nothing automated gets
-        // through, short enough that pasting a prepared review and pressing
-        // straight away only costs one extra press.
-        if (Date.now() - shownAt < 3000) return fail(T("errTooFast"));
+        // Three seconds from the form appearing — not from the page loading,
+        // which is a different moment entirely and made this a no-op. Long
+        // enough that nothing automated gets through, short enough that
+        // pasting a prepared review costs at most one extra press.
+        if (formShownAt && Date.now() - formShownAt < 3000) return fail(T("errTooFast"));
 
         if (!rating)            return fail(T("errRating"));
         if (name.length < 2)    return fail(T("errName"), nameEl);
@@ -1029,11 +1064,27 @@
         } catch (err) {
           const detail = String((err && err.message) || "");
           msg.className = "rform__msg is-error";
-          // 23505 is the unique index that gives one account one review. Say
-          // what to do about it rather than "that didn't send".
-          msg.textContent = /23505|duplicate key/i.test(detail)
-            ? T("errAlready")
-            : T("errPost");
+
+          if (/^auth (401|403)|not signed in/i.test(detail)) {
+            /* Dead session. Put the code box back so there is something
+               useful to do about it — and say so *there*, not here: #rMsg
+               lives inside the form, which is about to be hidden, so a
+               message written to it would vanish with it. paintAuthState
+               clears the auth message, so this has to come after. */
+            saveSession(null);
+            paintAuthState();
+            const authMsg = $("#rAuthMsg");
+            if (authMsg) {
+              authMsg.textContent = T("errSignedOut");
+              authMsg.className = "rform__msg is-error";
+            }
+          } else if (/23505|duplicate key/i.test(detail)) {
+            // The unique index that gives one account one review. Say what to
+            // do about it rather than "that didn't send".
+            msg.textContent = T("errAlready");
+          } else {
+            msg.textContent = T("errPost");
+          }
           console.error("[reviews] post failed:", err);
         } finally {
           submit.disabled = false;
@@ -1255,7 +1306,10 @@
   }
 
   function watchReveals() {
-    const targets = $$(".reveal");
+    // Anything already revealed stays revealed, so re-observing it only makes
+    // the observer do work to reach a conclusion it has already reached. This
+    // runs on every language switch, and the list only grows.
+    const targets = $$(".reveal").filter(el => !el.classList.contains("is-in"));
 
     if (reduceMotion || !("IntersectionObserver" in window)) {
       targets.forEach(el => el.classList.add("is-in"));

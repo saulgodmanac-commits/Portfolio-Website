@@ -186,8 +186,13 @@ larger number of reviews nobody can vouch for.
 There are two layers, and only one of them matters.
 
 **In the browser** (already working, nothing to do): a hidden honeypot field,
-a three-second trap so nothing automated can submit the instant the page
-loads, and checks that reject web addresses and single-character gibberish.
+a three-second trap timed from the moment the form becomes reachable, and
+checks that reject web addresses and single-character gibberish.
+
+That timing is the whole point of the trap and it was wrong for a while: it
+measured from page load, which is minutes earlier than the form appearing now
+that there is an email step in front of it. The window had always closed
+before anyone could type, so the check never once fired.
 There is no per-browser cooldown any more — a verified address and one review
 per account do that job properly, and in the database rather than in a
 `localStorage` value anyone can clear.

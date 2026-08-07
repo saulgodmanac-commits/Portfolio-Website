@@ -441,6 +441,7 @@ const TEXT = {
       errPost: "That didn't send. Please try again in a moment.",
       errLinks: "Please take the web address out of your review.",
       errAlready: "You already have a review. Delete it first if you'd like to write another.",
+      errSignedOut: "Your sign-in expired. Confirm your email again — what you wrote is kept.",
       errTooFast: "Take a moment over it, then press again.",
 
       // Shown in place of the form while SITE.reviewsPaused is on.
@@ -649,6 +650,7 @@ const TEXT = {
       errPost: "Не вдалося надіслати. Спробуйте ще раз за хвилину.",
       errLinks: "Приберіть, будь ласка, посилання з відгуку.",
       errAlready: "У вас уже є відгук. Видаліть його, якщо хочете написати новий.",
+      errSignedOut: "Термін входу минув. Підтвердьте пошту ще раз — написане збережеться.",
       errTooFast: "Не поспішайте, а тоді натисніть ще раз.",
 
       reviewsPausedNote: "Можливість залишити відгук наразі вимкнена — " +
